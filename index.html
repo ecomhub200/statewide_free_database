@@ -1880,6 +1880,16 @@
             stateFips: "51",
             countyLayer: 82
         };
+
+        // Multiple Overpass API servers for fallback
+        const OVERPASS_SERVERS = [
+            'https://overpass-api.de/api/interpreter',
+            'https://overpass.kumi.systems/api/interpreter',
+            'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+        ];
+
+        // Cache configuration
+        const CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
         
         // OSM to VDOT mapping
         const OSM_TO_VDOT = {
@@ -1987,7 +1997,14 @@
         // INITIALIZATION
         // =====================================================
         function initMap() {
-            map = L.map('map', { center: [37.54, -78.5], zoom: 7, zoomControl: false });
+            // Use Canvas renderer for better performance with many polylines
+            map = L.map('map', {
+                center: [37.54, -78.5],
+                zoom: 7,
+                zoomControl: false,
+                preferCanvas: true,
+                renderer: L.canvas({ padding: 0.5 })
+            });
 
             // Define basemap layers
             const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -2030,9 +2047,9 @@
 
             populateJurisdictionSelect();
 
-            // Set Henrico County as default jurisdiction and auto-load
-            document.getElementById('jurisdictionSelect').value = 'henrico';
-            onJurisdictionChange();
+            // Don't auto-load any jurisdiction - let user choose
+            // This prevents slow initial load and wasted bandwidth
+            document.getElementById('mapJurisdiction').textContent = 'Select a jurisdiction to begin';
         }
         
         function populateJurisdictionSelect() {
@@ -2163,71 +2180,147 @@
             document.getElementById('loadBtn').disabled = true;
             document.getElementById('refreshBtn').disabled = true;
 
+            let cachedData = null;
+
             try {
                 clearRoads();
 
                 // Check cache first (unless forcing refresh)
-                if (!forceRefresh) {
-                    showLoading(`Loading ${j.name}...`, 'Checking local cache');
-                    const cached = await getRoadCache(currentJurisdiction);
+                showLoading(`Loading ${j.name}...`, 'Checking local cache');
+                cachedData = await getRoadCache(currentJurisdiction);
 
-                    if (cached && cached.osmData) {
-                        const cacheAge = Date.now() - cached.timestamp;
-                        const cacheAgeHours = Math.round(cacheAge / (1000 * 60 * 60));
-                        const cacheAgeDisplay = cacheAgeHours < 24 ? `${cacheAgeHours}h ago` : `${Math.round(cacheAgeHours/24)}d ago`;
+                if (cachedData && cachedData.osmData && !forceRefresh) {
+                    const cacheAge = Date.now() - cachedData.timestamp;
+                    const cacheAgeHours = Math.round(cacheAge / (1000 * 60 * 60));
+                    const cacheAgeDisplay = cacheAgeHours < 24 ? `${cacheAgeHours}h ago` : `${Math.round(cacheAgeHours/24)}d ago`;
 
+                    // Check if cache is still valid (within 7 days)
+                    if (cacheAge < CACHE_MAX_AGE) {
                         updateLoading('Loading from cache...', `Cached ${cacheAgeDisplay}`);
-
-                        processRoadData(cached.osmData);
+                        await processRoadDataAsync(cachedData.osmData);
                         updateStats();
                         updateRoadTable();
-
                         displayAllSegmentsSummary();
                         hideLoading();
                         return;
+                    } else {
+                        // Cache expired, will fetch fresh but keep as fallback
+                        updateLoading('Cache expired...', 'Fetching fresh data');
                     }
                 }
 
-                // Fetch from OSM
-                showLoading(`Loading ${j.name}...`, forceRefresh ? 'Fetching fresh data from OSM' : 'Querying Overpass API');
-
+                // Fetch from OSM with fallback servers
                 const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
                     'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
 
                 const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
+                const query = `[out:json][timeout:120];(${wayQueries});out body geom;`;
 
-                const query = `[out:json][timeout:180];(${wayQueries});out body geom;`;
+                let data = null;
+                let lastError = null;
 
-                updateLoading('Fetching road geometries...', 'This may take 30-90 seconds');
+                // Try each Overpass server with retry logic
+                for (let serverIndex = 0; serverIndex < OVERPASS_SERVERS.length; serverIndex++) {
+                    const server = OVERPASS_SERVERS[serverIndex];
+                    const serverName = new URL(server).hostname.split('.')[0];
 
-                const response = await fetch('https://overpass-api.de/api/interpreter', {
-                    method: 'POST',
-                    body: `data=${encodeURIComponent(query)}`,
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-                });
+                    for (let attempt = 1; attempt <= 2; attempt++) {
+                        try {
+                            updateLoading(
+                                `Fetching road data...`,
+                                `Server: ${serverName} (attempt ${attempt}/2)`
+                            );
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
 
-                const data = await response.json();
+                            const response = await fetch(server, {
+                                method: 'POST',
+                                body: `data=${encodeURIComponent(query)}`,
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                signal: controller.signal
+                            });
 
-                updateLoading('Processing...', `${data.elements?.length || 0} segments found`);
+                            clearTimeout(timeoutId);
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+
+                            data = await response.json();
+
+                            if (data && data.elements) {
+                                updateLoading('Success!', `${data.elements.length} road segments received`);
+                                break; // Success! Exit retry loop
+                            }
+                        } catch (error) {
+                            lastError = error;
+                            console.warn(`Overpass ${serverName} attempt ${attempt} failed:`, error.message);
+
+                            if (attempt < 2) {
+                                // Wait before retry (exponential backoff)
+                                const waitTime = attempt * 2000;
+                                updateLoading('Retrying...', `Waiting ${waitTime/1000}s before retry`);
+                                await new Promise(resolve => setTimeout(resolve, waitTime));
+                            }
+                        }
+                    }
+
+                    if (data && data.elements) break; // Success! Exit server loop
+
+                    // Try next server
+                    if (serverIndex < OVERPASS_SERVERS.length - 1) {
+                        updateLoading('Switching servers...', 'Trying backup server');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+
+                // If all servers failed, use cached data as fallback
+                if (!data || !data.elements) {
+                    if (cachedData && cachedData.osmData) {
+                        const cacheAgeHours = Math.round((Date.now() - cachedData.timestamp) / (1000 * 60 * 60));
+                        const cacheAgeDisplay = cacheAgeHours < 24 ? `${cacheAgeHours}h ago` : `${Math.round(cacheAgeHours/24)}d ago`;
+
+                        updateLoading('Using cached data...', `Fresh data unavailable. Using cache from ${cacheAgeDisplay}`);
+                        await new Promise(resolve => setTimeout(resolve, 1500)); // Show message briefly
+
+                        await processRoadDataAsync(cachedData.osmData);
+                        updateStats();
+                        updateRoadTable();
+                        displayAllSegmentsSummary();
+                        hideLoading();
+
+                        // Show warning banner
+                        showCacheWarning(cacheAgeDisplay);
+                        return;
+                    }
+
+                    // No cache, no data - show error
+                    throw new Error(`All servers failed. ${lastError?.message || 'Please try again later.'}`);
+                }
+
+                // Process the fetched data
+                updateLoading('Processing roads...', `Analyzing ${data.elements.length} segments`);
+                await processRoadDataAsync(data);
 
                 // Save to cache
+                updateLoading('Saving to cache...', 'Storing for offline use');
                 await saveRoadCache(currentJurisdiction, data);
 
-                processRoadData(data);
                 updateStats();
                 updateRoadTable();
-
                 displayAllSegmentsSummary();
                 hideLoading();
+
+                // Remove any previous warning
+                hideCacheWarning();
 
             } catch (error) {
                 console.error('Error:', error);
                 updateLoading('Error', error.message);
                 setTimeout(() => {
                     hideLoading();
-                    alert(`Failed: ${error.message}`);
+                    alert(`Failed to load road data: ${error.message}`);
                 }, 2000);
             } finally {
                 document.getElementById('loadBtn').disabled = false;
@@ -2235,17 +2328,85 @@
             }
         }
 
+        // Async wrapper for processRoadData to prevent UI blocking
+        async function processRoadDataAsync(data) {
+            return new Promise(resolve => {
+                // Use requestAnimationFrame to allow UI updates
+                requestAnimationFrame(() => {
+                    processRoadData(data);
+                    resolve();
+                });
+            });
+        }
+
+        // Show warning banner when using cached data
+        function showCacheWarning(cacheAge) {
+            let banner = document.getElementById('cacheWarningBanner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'cacheWarningBanner';
+                banner.style.cssText = `
+                    position: fixed;
+                    top: 57px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: linear-gradient(135deg, #f59e0b, #d97706);
+                    color: #000;
+                    padding: 0.5rem 1rem;
+                    border-radius: 0 0 8px 8px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    z-index: 1001;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                `;
+                document.body.appendChild(banner);
+            }
+            banner.innerHTML = `
+                <span>⚠️ Showing cached data from ${cacheAge}</span>
+                <button onclick="refreshRoadData()" style="background: #000; color: #fff; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.625rem;">Retry</button>
+                <button onclick="hideCacheWarning()" style="background: transparent; border: none; color: #000; cursor: pointer; font-size: 1rem; padding: 0;">×</button>
+            `;
+            banner.style.display = 'flex';
+        }
+
+        function hideCacheWarning() {
+            const banner = document.getElementById('cacheWarningBanner');
+            if (banner) banner.style.display = 'none';
+        }
+
         // Force refresh from OSM
         function refreshRoadData() {
             loadRoadData(true);
         }
         
+        // Layer groups for each functional class (for better performance)
+        let roadLayerGroups = {};
+
+        function initRoadLayerGroups() {
+            // Create a layer group for each functional class
+            for (let fc = 1; fc <= 7; fc++) {
+                if (roadLayerGroups[fc]) {
+                    map.removeLayer(roadLayerGroups[fc]);
+                }
+                roadLayerGroups[fc] = L.layerGroup().addTo(map);
+            }
+        }
+
         function processRoadData(data) {
             if (!data.elements?.length) return;
+
+            // Initialize layer groups
+            initRoadLayerGroups();
 
             allGeoJson = { type: 'FeatureCollection', features: [] };
             let filteredCount = 0;
             let totalCount = 0;
+
+            // First pass: categorize roads by functional class
+            const roadsByClass = { '1': [], '2': [], '3': [], '4': [], '5': [], '6': [], '7': [] };
 
             data.elements.forEach(el => {
                 if (el.type !== 'way' || !el.geometry) return;
@@ -2277,8 +2438,7 @@
                     length, coords
                 };
 
-                roadsData.push(road);
-                addRoadToMap(road);
+                roadsByClass[funcClass].push(road);
 
                 allGeoJson.features.push({
                     type: 'Feature',
@@ -2287,7 +2447,55 @@
                 });
             });
 
+            // Process roads in order of importance (major roads first for progressive rendering)
+            // FC 1-3 are major roads, render them first
+            const processingOrder = ['1', '2', '3', '4', '5', '6', '7'];
+
+            processingOrder.forEach(fc => {
+                roadsByClass[fc].forEach(road => {
+                    roadsData.push(road);
+                    addRoadToLayerGroup(road);
+                });
+            });
+
             console.log(`Boundary filter: ${filteredCount} of ${totalCount} segments filtered out`);
+            console.log(`Roads by class:`, Object.keys(roadsByClass).map(k => `FC${k}: ${roadsByClass[k].length}`).join(', '));
+        }
+
+        function addRoadToLayerGroup(road) {
+            const fc = FC_STYLES[road.funcClass];
+
+            const line = L.polyline(road.coords, {
+                color: fc.color,
+                weight: fc.weight,
+                opacity: 0.85,
+                lineJoin: 'round',
+                lineCap: 'round'
+            });
+
+            line.on('mouseover', function() {
+                this.setStyle({ weight: fc.weight + 2, opacity: 1 });
+                this.bringToFront();
+            });
+            line.on('mouseout', function() {
+                if (selectedRoad !== road.id) {
+                    this.setStyle({ weight: fc.weight, opacity: 0.85 });
+                }
+            });
+            line.on('click', () => selectRoad(road));
+
+            line.bindPopup(`
+                <div class="popup-title">${road.name}</div>
+                <div class="popup-class" style="background:${fc.color};color:${road.funcClass==='4'?'#000':'#fff'}">FC ${road.funcClass} · ${fc.name}</div>
+                <div class="popup-details">
+                    <div><b>Type:</b> ${road.highway}</div>
+                    <div><b>Length:</b> ${road.length.toFixed(2)} mi</div>
+                </div>
+            `);
+
+            // Add to appropriate layer group
+            roadLayerGroups[road.funcClass].addLayer(line);
+            roadLayers[road.id] = line;
         }
         
         function calcLength(coords) {
@@ -2299,29 +2507,6 @@
                 t += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             }
             return t;
-        }
-        
-        function addRoadToMap(road) {
-            const fc = FC_STYLES[road.funcClass];
-            
-            const line = L.polyline(road.coords, {
-                color: fc.color, weight: fc.weight, opacity: 0.85, lineJoin: 'round', lineCap: 'round'
-            }).addTo(map);
-            
-            line.on('mouseover', function() { this.setStyle({ weight: fc.weight + 2, opacity: 1 }); this.bringToFront(); });
-            line.on('mouseout', function() { if (selectedRoad !== road.id) this.setStyle({ weight: fc.weight, opacity: 0.85 }); });
-            line.on('click', () => selectRoad(road));
-            
-            line.bindPopup(`
-                <div class="popup-title">${road.name}</div>
-                <div class="popup-class" style="background:${fc.color};color:${road.funcClass==='4'?'#000':'#fff'}">FC ${road.funcClass} · ${fc.name}</div>
-                <div class="popup-details">
-                    <div><b>Type:</b> ${road.highway}</div>
-                    <div><b>Length:</b> ${road.length.toFixed(2)} mi</div>
-                </div>
-            `);
-            
-            roadLayers[road.id] = line;
         }
         
         function selectRoad(road) {
@@ -2378,15 +2563,25 @@
         
         function filterByClass(fc) {
             document.querySelectorAll('.legend-item').forEach(i => i.classList.remove('active'));
-            
+
             if (activeFilter === fc) {
+                // Toggle off - show all layers
                 activeFilter = null;
-                roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: 0.85 }));
+                Object.entries(roadLayerGroups).forEach(([fcKey, lg]) => {
+                    lg.eachLayer(layer => layer.setStyle({ opacity: 0.85 }));
+                });
                 updateRoadTable();
             } else {
+                // Filter to specific class
                 activeFilter = fc;
                 document.querySelector(`.legend-item[data-class="${fc}"]`)?.classList.add('active');
-                roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: r.funcClass === fc ? 1 : 0.1 }));
+
+                // Use layer groups for faster filtering
+                Object.entries(roadLayerGroups).forEach(([fcKey, lg]) => {
+                    const opacity = fcKey === fc ? 1 : 0.1;
+                    lg.eachLayer(layer => layer.setStyle({ opacity }));
+                });
+
                 updateRoadTable(roadsData.filter(r => r.funcClass === fc));
             }
         }
@@ -2532,20 +2727,83 @@
             }
         }
         
+        // Virtual scrolling configuration
+        const VIRTUAL_SCROLL_CONFIG = {
+            initialLoad: 100,
+            loadMoreCount: 100,
+            rowHeight: 32
+        };
+        let currentTableData = [];
+        let displayedRowCount = 0;
+
         function updateRoadTable(data = null) {
-            const allData = data || roadsData;
-            // Show all segments (removed 150 limit per user request)
-            document.getElementById('roadTableBody').innerHTML = allData.map(r => {
+            currentTableData = data || roadsData;
+            displayedRowCount = 0;
+
+            const tableBody = document.getElementById('roadTableBody');
+            tableBody.innerHTML = '';
+
+            // Load initial batch
+            loadMoreRows();
+
+            document.getElementById('roadListCount').textContent = `${currentTableData.length.toLocaleString()} segments`;
+        }
+
+        function loadMoreRows() {
+            const tableBody = document.getElementById('roadTableBody');
+            const startIndex = displayedRowCount;
+            const endIndex = Math.min(startIndex + VIRTUAL_SCROLL_CONFIG.loadMoreCount, currentTableData.length);
+
+            // Remove existing "Load More" button if any
+            const existingBtn = document.getElementById('loadMoreBtn');
+            if (existingBtn) existingBtn.remove();
+
+            // Add rows
+            const fragment = document.createDocumentFragment();
+            for (let i = startIndex; i < endIndex; i++) {
+                const r = currentTableData[i];
                 const fc = FC_STYLES[r.funcClass];
-                return `<tr data-id="${r.id}" onclick="selectRoadById(${r.id})">
+                const tr = document.createElement('tr');
+                tr.dataset.id = r.id;
+                tr.onclick = () => selectRoadById(r.id);
+                tr.innerHTML = `
                     <td><span class="class-dot" style="background:${fc.color}"></span>${r.name.substring(0,20)}${r.name.length>20?'...':''}</td>
                     <td>${r.funcClass}</td>
                     <td>${r.highway}</td>
-                </tr>`;
-            }).join('');
-            document.getElementById('roadListCount').textContent = `${allData.length.toLocaleString()} segments`;
+                `;
+                fragment.appendChild(tr);
+            }
+            tableBody.appendChild(fragment);
+
+            displayedRowCount = endIndex;
+
+            // Add "Load More" button if there are more rows
+            if (displayedRowCount < currentTableData.length) {
+                const remaining = currentTableData.length - displayedRowCount;
+                const loadMoreRow = document.createElement('tr');
+                loadMoreRow.id = 'loadMoreBtn';
+                loadMoreRow.innerHTML = `
+                    <td colspan="3" style="text-align: center; padding: 0.75rem;">
+                        <button onclick="loadMoreRows()" style="
+                            background: var(--accent-blue);
+                            color: white;
+                            border: none;
+                            padding: 0.5rem 1rem;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-size: 0.75rem;
+                            font-weight: 600;
+                        ">Load More (${remaining.toLocaleString()} remaining)</button>
+                    </td>
+                `;
+                tableBody.appendChild(loadMoreRow);
+            }
+
+            // Update count display
+            document.getElementById('roadListCount').textContent =
+                `Showing ${displayedRowCount.toLocaleString()} of ${currentTableData.length.toLocaleString()} segments`;
         }
-        
+
         function selectRoadById(id) { const r = roadsData.find(x => x.id === id); if (r) selectRoad(r); }
 
         function displayAllSegmentsSummary() {
@@ -2634,7 +2892,17 @@
         }
         
         function clearRoads() {
-            Object.values(roadLayers).forEach(l => map.removeLayer(l));
+            // Clear all layer groups
+            Object.values(roadLayerGroups).forEach(lg => {
+                lg.clearLayers();
+                map.removeLayer(lg);
+            });
+            roadLayerGroups = {};
+
+            // Clear individual layer references
+            Object.values(roadLayers).forEach(l => {
+                if (map.hasLayer(l)) map.removeLayer(l);
+            });
             roadLayers = {};
             roadsData = [];
             allGeoJson = null;
