@@ -1,0 +1,133 @@
+name: Generate Road Data
+
+on:
+  # Automatic: Run every 60 days (1st day of every 2nd month)
+  schedule:
+    - cron: '0 2 1 */2 *'  # At 02:00 UTC on day 1 of every 2nd month
+
+  # Manual: Click "Run workflow" button in GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      jurisdictions:
+        description: 'Specific jurisdictions to generate (comma-separated, e.g., "henrico,fairfax"). Leave empty for all.'
+        required: false
+        default: ''
+      batch:
+        description: 'Batch number (1-9) for partial runs. Leave empty for all.'
+        required: false
+        default: ''
+
+jobs:
+  generate-road-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 hours max
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create data directories
+        run: |
+          mkdir -p data/roads
+
+      - name: Generate road data
+        run: |
+          # Determine which jurisdictions to process
+          INPUT_JURISDICTIONS="${{ github.event.inputs.jurisdictions }}"
+          INPUT_BATCH="${{ github.event.inputs.batch }}"
+
+          # All Virginia jurisdictions grouped into 9 batches
+          BATCH_1="accomack albemarle alleghany amelia amherst appomattox arlington augusta bath bedford_county bland botetourt brunswick buchanan buckingham"
+          BATCH_2="campbell caroline carroll charles_city charlotte chesterfield clarke craig culpeper cumberland dickenson dinwiddie essex fairfax fauquier"
+          BATCH_3="floyd fluvanna franklin_county frederick giles gloucester goochland grayson greene greensville halifax hanover henrico henry highland"
+          BATCH_4="isle_of_wight james_city king_and_queen king_george king_william lancaster lee loudoun louisa lunenburg madison mathews mecklenburg middlesex montgomery"
+          BATCH_5="nelson new_kent northampton northumberland nottoway orange page patrick pittsylvania powhatan prince_edward prince_george prince_william pulaski rappahannock"
+          BATCH_6="richmond_county roanoke_county rockbridge rockingham russell scott shenandoah smyth southampton spotsylvania stafford surry sussex tazewell warren"
+          BATCH_7="washington westmoreland wise wythe york alexandria bristol buena_vista charlottesville chesapeake colonial_heights covington danville emporia"
+          BATCH_8="fairfax_city falls_church franklin_city fredericksburg galax hampton harrisonburg hopewell lexington lynchburg manassas manassas_park martinsville newport_news"
+          BATCH_9="norfolk norton petersburg poquoson portsmouth radford richmond_city roanoke_city salem staunton suffolk virginia_beach waynesboro williamsburg winchester"
+
+          if [ -n "$INPUT_JURISDICTIONS" ]; then
+            # Process specific jurisdictions provided by user
+            JURISDICTIONS=$(echo "$INPUT_JURISDICTIONS" | tr ',' ' ')
+            echo "Processing user-specified jurisdictions: $JURISDICTIONS"
+          elif [ -n "$INPUT_BATCH" ]; then
+            # Process specific batch
+            case $INPUT_BATCH in
+              1) JURISDICTIONS="$BATCH_1" ;;
+              2) JURISDICTIONS="$BATCH_2" ;;
+              3) JURISDICTIONS="$BATCH_3" ;;
+              4) JURISDICTIONS="$BATCH_4" ;;
+              5) JURISDICTIONS="$BATCH_5" ;;
+              6) JURISDICTIONS="$BATCH_6" ;;
+              7) JURISDICTIONS="$BATCH_7" ;;
+              8) JURISDICTIONS="$BATCH_8" ;;
+              9) JURISDICTIONS="$BATCH_9" ;;
+              *) echo "Invalid batch number"; exit 1 ;;
+            esac
+            echo "Processing batch $INPUT_BATCH: $JURISDICTIONS"
+          else
+            # Process all jurisdictions (scheduled run)
+            JURISDICTIONS="$BATCH_1 $BATCH_2 $BATCH_3 $BATCH_4 $BATCH_5 $BATCH_6 $BATCH_7 $BATCH_8 $BATCH_9"
+            echo "Processing ALL jurisdictions"
+          fi
+
+          # Run the generator script
+          node scripts/generate-road-data.js $JURISDICTIONS
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [ -n "$(git status --porcelain data/)" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in data folder"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "No changes detected"
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # Add all data files
+          git add data/
+
+          # Create commit message with summary
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+          FILE_COUNT=$(git diff --cached --name-only | wc -l)
+
+          git commit -m "Update road data ($FILE_COUNT files) - $TIMESTAMP
+
+          Automated update via GitHub Actions.
+
+          Trigger: ${{ github.event_name }}
+          Run ID: ${{ github.run_id }}"
+
+          git push
+
+      - name: Summary
+        run: |
+          echo "## Road Data Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u +"%Y-%m-%d %H:%M UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -d "data/roads" ]; then
+            FILE_COUNT=$(ls -1 data/roads/*.json 2>/dev/null | wc -l)
+            TOTAL_SIZE=$(du -sh data/roads 2>/dev/null | cut -f1)
+            echo "**Files generated:** $FILE_COUNT" >> $GITHUB_STEP_SUMMARY
+            echo "**Total size:** $TOTAL_SIZE" >> $GITHUB_STEP_SUMMARY
+          fi
