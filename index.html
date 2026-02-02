@@ -622,48 +622,137 @@
         
         .map-controls {
             position: absolute;
-            top: 0.5rem;
-            left: 0.5rem;
+            top: 0.75rem;
+            left: 0.75rem;
             z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(12px);
+            padding: 0.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .map-controls-section {
             display: flex;
             flex-direction: column;
             gap: 0.25rem;
         }
-        
+
+        .map-controls-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 0.25rem 0;
+        }
+
+        .map-controls-label {
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            text-align: center;
+            padding: 0.25rem 0;
+        }
+
         .map-control-btn {
-            width: 32px;
-            height: 32px;
-            background: var(--bg-secondary);
+            width: 36px;
+            height: 36px;
+            background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
-            border-radius: 5px;
+            border-radius: 6px;
             color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            gap: 0.15rem;
+        }
+
+        .map-control-btn .btn-label {
+            font-size: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .map-control-btn:hover {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+
+        .map-control-btn:hover .btn-label {
+            color: white;
+        }
+
+        .map-control-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+        }
+
+        .map-control-btn.active .btn-label {
+            color: white;
+        }
+
+        .map-control-btn.danger:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .map-style-toggles {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .map-style-btn {
+            flex: 1;
+            width: 36px;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-muted);
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.2s ease;
-        }
-        
-        .map-control-btn:hover {
-            background: var(--bg-tertiary);
-            border-color: var(--accent-blue);
+            font-size: 1rem;
         }
 
-        .basemap-dropdown {
-            position: relative;
+        .map-style-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        .map-style-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
         }
 
         .basemap-menu {
             display: none;
             position: absolute;
-            top: 0;
-            left: 36px;
-            background: var(--bg-secondary);
+            top: 0.75rem;
+            left: 60px;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(12px);
             border: 1px solid var(--border-color);
-            border-radius: 5px;
+            border-radius: 8px;
             overflow: hidden;
-            min-width: 120px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            min-width: 130px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
         }
 
         .basemap-menu.show {
@@ -945,65 +1034,6 @@
             background: var(--bg-tertiary);
             padding: 0.15rem 0.4rem;
             border-radius: 10px;
-        }
-
-        /* Drawing Toolbar */
-        .drawing-toolbar {
-            position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 0.4rem;
-            align-items: center;
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(12px);
-            padding: 0.4rem 0.75rem;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            z-index: 999;
-        }
-        .drawing-toolbar .toolbar-label {
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-right: 0.25rem;
-        }
-        .drawing-toolbar .toolbar-divider {
-            width: 1px;
-            height: 24px;
-            background: var(--border-color);
-            margin: 0 0.25rem;
-        }
-        .drawing-tool-btn {
-            padding: 0.4rem 0.65rem;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-            transition: all 0.2s;
-        }
-        .drawing-tool-btn:hover {
-            background: var(--accent-blue);
-            border-color: var(--accent-blue);
-            color: white;
-        }
-        .drawing-tool-btn.active {
-            background: var(--accent-blue);
-            border-color: var(--accent-blue);
-            color: white;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
-        }
-        .drawing-tool-btn.danger:hover {
-            background: var(--danger);
-            border-color: var(--danger);
         }
 
         /* Measure Tooltip */
@@ -1416,30 +1446,94 @@
         <section class="map-section">
             <div id="map"></div>
 
-            <!-- Drawing Toolbar -->
-            <div class="drawing-toolbar" id="drawingToolbar">
-                <span class="toolbar-label">Draw:</span>
-                <button class="drawing-tool-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Draw polygon - Click to add vertices, double-click to finish">
-                    <span>⬡</span> Polygon
-                </button>
-                <button class="drawing-tool-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Draw circle - Click center, then click to set radius">
-                    <span>◯</span> Circle
-                </button>
-                <button class="drawing-tool-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure distance - Click points, double-click to finish">
-                    <span>📏</span> Measure
-                </button>
-                <button class="drawing-tool-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear all drawings">
-                    <span>✕</span> Clear
-                </button>
-                <div class="toolbar-divider"></div>
-                <div class="btn-toggle-group">
-                    <button class="btn-toggle active" onclick="switchMapStyle('street')" id="btnStreetView">
-                        <span>🗺️</span> Street
+            <!-- Unified Map Controls Panel -->
+            <div class="map-controls">
+                <!-- Map Navigation Controls -->
+                <div class="map-controls-section">
+                    <button class="map-control-btn" onclick="resetView()" title="Reset View">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                            <path d="M3 3v5h5"/>
+                        </svg>
                     </button>
-                    <button class="btn-toggle" onclick="switchMapStyle('satellite')" id="btnSatelliteView">
-                        <span>🛰️</span> Satellite
+                    <button class="map-control-btn" onclick="toggleBasemapMenu()" title="Change Basemap">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12,2 2,7 12,12 22,7"/>
+                            <polyline points="2,17 12,22 22,17"/>
+                            <polyline points="2,12 12,17 22,12"/>
+                        </svg>
+                    </button>
+                    <button class="map-control-btn" onclick="fitToBounds()" title="Fit to Data">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h6v6"/>
+                            <path d="M9 21H3v-6"/>
+                            <path d="M21 3l-7 7"/>
+                            <path d="M3 21l7-7"/>
+                        </svg>
+                    </button>
+                    <button class="map-control-btn" onclick="clearData()" title="Clear Data">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
                     </button>
                 </div>
+
+                <div class="map-controls-divider"></div>
+
+                <!-- Drawing Tools -->
+                <div class="map-controls-label">Draw</div>
+                <div class="map-controls-section">
+                    <button class="map-control-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Draw Area - Click to add points, double-click to finish">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                        </svg>
+                        <span class="btn-label">Area</span>
+                    </button>
+                    <button class="map-control-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Draw Radius - Click center, then click to set radius">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="12" x2="12" y2="6"/>
+                        </svg>
+                        <span class="btn-label">Radius</span>
+                    </button>
+                    <button class="map-control-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure Distance - Click points, double-click to finish">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 3l4 4-4 4"/>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                            <path d="M7 21l-4-4 4-4"/>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                        </svg>
+                        <span class="btn-label">Dist</span>
+                    </button>
+                    <button class="map-control-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear Drawings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        <span class="btn-label">Clear</span>
+                    </button>
+                </div>
+
+                <div class="map-controls-divider"></div>
+
+                <!-- Map Style Toggle -->
+                <div class="map-style-toggles">
+                    <button class="map-style-btn active" onclick="switchMapStyle('street')" id="btnStreetView" title="Street Map">
+                        🗺️
+                    </button>
+                    <button class="map-style-btn" onclick="switchMapStyle('satellite')" id="btnSatelliteView" title="Satellite">
+                        🛰️
+                    </button>
+                </div>
+            </div>
+
+            <!-- Basemap Menu (positioned separately) -->
+            <div class="basemap-menu" id="basemapMenu">
+                <button class="basemap-option active" onclick="switchBasemap('CARTO Light')">CARTO Light</button>
+                <button class="basemap-option" onclick="switchBasemap('OpenStreetMap')">OpenStreetMap</button>
+                <button class="basemap-option" onclick="switchBasemap('ESRI Street Map')">ESRI Street</button>
+                <button class="basemap-option" onclick="switchBasemap('ESRI Imagery')">ESRI Imagery</button>
             </div>
 
             <div class="map-search-box">
@@ -1456,45 +1550,7 @@
                 <div class="loading-text" id="loadingText">Loading...</div>
                 <div class="loading-progress" id="loadingProgress"></div>
             </div>
-            
-            <div class="map-controls">
-                <button class="map-control-btn" onclick="resetView()" title="Reset View">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                        <path d="M3 3v5h5"/>
-                    </svg>
-                </button>
-                <div class="basemap-dropdown">
-                    <button class="map-control-btn" onclick="toggleBasemapMenu()" title="Change Basemap">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="12,2 2,7 12,12 22,7"/>
-                            <polyline points="2,17 12,22 22,17"/>
-                            <polyline points="2,12 12,17 22,12"/>
-                        </svg>
-                    </button>
-                    <div class="basemap-menu" id="basemapMenu">
-                        <button class="basemap-option active" onclick="switchBasemap('CARTO Light')">CARTO Light</button>
-                        <button class="basemap-option" onclick="switchBasemap('OpenStreetMap')">OpenStreetMap</button>
-                        <button class="basemap-option" onclick="switchBasemap('ESRI Street Map')">ESRI Street</button>
-                        <button class="basemap-option" onclick="switchBasemap('ESRI Imagery')">ESRI Imagery</button>
-                    </div>
-                </div>
-                <button class="map-control-btn" onclick="fitToBounds()" title="Fit to Data">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M15 3h6v6"/>
-                        <path d="M9 21H3v-6"/>
-                        <path d="M21 3l-7 7"/>
-                        <path d="M3 21l7-7"/>
-                    </svg>
-                </button>
-                <button class="map-control-btn" onclick="clearData()" title="Clear">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                </button>
-            </div>
-            
+
             <div class="map-info-overlay">
                 <span class="coords" id="mapCoords">37.5407, -77.4360</span>
                 <span class="zoom-level" id="mapZoom">Zoom: 8</span>
