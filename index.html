@@ -398,13 +398,57 @@
         .search-icon {
             position: absolute;
             left: 0.625rem;
-            top: 50%;
-            transform: translateY(-50%);
+            top: 0.625rem;
             color: var(--text-muted);
             width: 12px;
             height: 12px;
         }
-        
+
+        .search-results {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            margin-top: -1px;
+        }
+
+        .search-results.show { display: block; }
+
+        .search-result-item {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-item:hover, .search-result-item.selected { background: var(--bg-tertiary); }
+
+        .search-result-name {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .search-result-type {
+            color: var(--text-muted);
+            font-size: 0.625rem;
+        }
+
+        .search-loading {
+            padding: 0.75rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
         .legend-card {
             background: var(--bg-card);
             border-radius: 8px;
@@ -845,7 +889,8 @@
                     <circle cx="11" cy="11" r="8"/>
                     <path d="m21 21-4.35-4.35"/>
                 </svg>
-                <input type="text" class="search-input" placeholder="Search roads..." id="roadSearch" oninput="filterRoads()">
+                <input type="text" class="search-input" placeholder="Search address or location..." id="addressSearch" oninput="debounceSearch()" onkeydown="handleSearchKeydown(event)">
+                <div class="search-results" id="searchResults"></div>
             </div>
             
             <div class="section-title">Statistics</div>
@@ -1221,8 +1266,8 @@
         }
 
         function lineSegmentIntersectsBoundary(coords, polygonRings) {
-            // Check if line segment has significant portion inside boundary
-            // At least one point must be inside, or line crosses boundary
+            // Check if line segment is primarily inside the boundary
+            // Require majority of points to be inside to exclude cross-boundary segments
             const outerRing = polygonRings[0];
             let insideCount = 0;
             for (const coord of coords) {
@@ -1230,8 +1275,8 @@
                     insideCount++;
                 }
             }
-            // Return true if at least 20% of points are inside (handles edge cases)
-            return insideCount > 0 && (insideCount / coords.length) >= 0.2;
+            // Return true only if at least 50% of points are inside (removes cross-boundary segments)
+            return insideCount > 0 && (insideCount / coords.length) >= 0.5;
         }
 
         function extractPolygonCoords(geoJsonFeature) {
@@ -1272,21 +1317,50 @@
         function initMap() {
             map = L.map('map', { center: [37.54, -78.5], zoom: 7, zoomControl: false });
 
-            // ESRI World Street Map
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            // Define basemap layers
+            const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            });
+
+            const esriStreetLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles &copy; Esri', maxZoom: 19
-            }).addTo(map);
-            
+            });
+
+            const esriImageryLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri', maxZoom: 19
+            });
+
+            const cartoLightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+            });
+
+            // Add OpenStreetMap as default for better road visibility
+            osmLayer.addTo(map);
+
+            // Add layer control
+            const baseMaps = {
+                "OpenStreetMap": osmLayer,
+                "ESRI Street Map": esriStreetLayer,
+                "ESRI Imagery": esriImageryLayer,
+                "CARTO Light": cartoLightLayer
+            };
+            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
             L.control.zoom({ position: 'bottomright' }).addTo(map);
-            
+
             map.on('mousemove', e => {
                 document.getElementById('mapCoords').textContent = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
             });
             map.on('zoomend', () => {
                 document.getElementById('mapZoom').textContent = `Zoom: ${map.getZoom()}`;
             });
-            
+
             populateJurisdictionSelect();
+
+            // Set Henrico County as default jurisdiction and auto-load
+            document.getElementById('jurisdictionSelect').value = 'henrico';
+            onJurisdictionChange();
         }
         
         function populateJurisdictionSelect() {
@@ -1632,17 +1706,138 @@
             }
         }
         
-        function filterRoads() {
-            const q = document.getElementById('roadSearch').value.toLowerCase();
-            if (!q) {
-                roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: 0.85 }));
-                updateRoadTable();
+        // =====================================================
+        // OSM NOMINATIM ADDRESS SEARCH
+        // =====================================================
+        let searchTimeout = null;
+        let searchResults = [];
+        let selectedSearchIndex = -1;
+        let searchMarker = null;
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            const query = document.getElementById('addressSearch').value.trim();
+
+            if (query.length < 3) {
+                hideSearchResults();
                 return;
             }
-            const filtered = roadsData.filter(r => r.name.toLowerCase().includes(q) || r.ref?.toLowerCase().includes(q));
-            roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: filtered.includes(r) ? 1 : 0.1 }));
-            updateRoadTable(filtered);
+
+            searchTimeout = setTimeout(() => searchNominatim(query), 300);
         }
+
+        async function searchNominatim(query) {
+            const resultsEl = document.getElementById('searchResults');
+            resultsEl.innerHTML = '<div class="search-loading">Searching...</div>';
+            resultsEl.classList.add('show');
+
+            try {
+                // Get current jurisdiction bounds for viewbox bias
+                const j = JURISDICTIONS[currentJurisdiction];
+                let viewbox = '';
+                if (j && j.bbox) {
+                    viewbox = `&viewbox=${j.bbox.join(',')}&bounded=1`;
+                }
+
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us&limit=8${viewbox}`;
+
+                const response = await fetch(url, {
+                    headers: { 'User-Agent': 'CrashLens-VDOT-Viewer/1.0' }
+                });
+
+                if (!response.ok) throw new Error('Search failed');
+
+                searchResults = await response.json();
+                selectedSearchIndex = -1;
+
+                if (searchResults.length === 0) {
+                    resultsEl.innerHTML = '<div class="search-loading">No results found</div>';
+                    return;
+                }
+
+                resultsEl.innerHTML = searchResults.map((r, i) => `
+                    <div class="search-result-item" data-index="${i}" onclick="selectSearchResult(${i})">
+                        <div class="search-result-name">${r.display_name.split(',').slice(0, 2).join(', ')}</div>
+                        <div class="search-result-type">${r.type} · ${r.display_name.split(',').slice(2, 4).join(', ')}</div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Nominatim search error:', error);
+                resultsEl.innerHTML = '<div class="search-loading">Search error. Try again.</div>';
+            }
+        }
+
+        function handleSearchKeydown(event) {
+            const resultsEl = document.getElementById('searchResults');
+            if (!resultsEl.classList.contains('show') || searchResults.length === 0) return;
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                selectedSearchIndex = Math.min(selectedSearchIndex + 1, searchResults.length - 1);
+                updateSearchSelection();
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                selectedSearchIndex = Math.max(selectedSearchIndex - 1, 0);
+                updateSearchSelection();
+            } else if (event.key === 'Enter' && selectedSearchIndex >= 0) {
+                event.preventDefault();
+                selectSearchResult(selectedSearchIndex);
+            } else if (event.key === 'Escape') {
+                hideSearchResults();
+            }
+        }
+
+        function updateSearchSelection() {
+            document.querySelectorAll('.search-result-item').forEach((el, i) => {
+                el.classList.toggle('selected', i === selectedSearchIndex);
+                if (i === selectedSearchIndex) el.scrollIntoView({ block: 'nearest' });
+            });
+        }
+
+        function selectSearchResult(index) {
+            const result = searchResults[index];
+            if (!result) return;
+
+            const lat = parseFloat(result.lat);
+            const lon = parseFloat(result.lon);
+
+            // Remove previous marker if exists
+            if (searchMarker) {
+                map.removeLayer(searchMarker);
+            }
+
+            // Add marker at selected location
+            searchMarker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                    className: 'search-marker',
+                    html: '<div style="background: var(--accent-cyan); width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                })
+            }).addTo(map);
+
+            // Zoom to location
+            map.setView([lat, lon], 15);
+
+            // Update search input
+            document.getElementById('addressSearch').value = result.display_name.split(',').slice(0, 2).join(', ');
+
+            hideSearchResults();
+        }
+
+        function hideSearchResults() {
+            document.getElementById('searchResults').classList.remove('show');
+            searchResults = [];
+            selectedSearchIndex = -1;
+        }
+
+        // Close search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-box')) {
+                hideSearchResults();
+            }
+        });
         
         function updateStats() {
             document.getElementById('totalRoads').textContent = roadsData.length.toLocaleString();
@@ -1988,7 +2183,9 @@
         // =====================================================
         async function openSaveModal() {
             document.getElementById('saveModal').classList.add('show');
-            document.getElementById('saveName').value = '';
+            // Pre-fill with current jurisdiction name
+            const j = JURISDICTIONS[currentJurisdiction];
+            document.getElementById('saveName').value = j ? j.name : '';
             await updateSavedList();
         }
 
