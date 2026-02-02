@@ -2829,6 +2829,12 @@
             if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
                 return 'Network error - check your internet connection';
             }
+            if (error.message.includes('XML') || error.message.includes('Unexpected token')) {
+                return 'Server returned error page - server may be overloaded';
+            }
+            if (error.message.includes('content-type')) {
+                return 'Invalid response format - trying next server';
+            }
             return error.message;
         }
 
@@ -2923,6 +2929,16 @@
 
                             if (!response.ok) {
                                 throw new Error(`HTTP ${response.status}`);
+                            }
+
+                            // Check content-type to avoid parsing XML/HTML as JSON
+                            const contentType = response.headers.get('content-type') || '';
+                            if (!contentType.includes('application/json')) {
+                                const text = await response.text();
+                                if (text.startsWith('<?xml') || text.startsWith('<')) {
+                                    throw new Error('Server returned XML/HTML instead of JSON - server may be overloaded');
+                                }
+                                throw new Error(`Unexpected content-type: ${contentType}`);
                             }
 
                             const data = await response.json();
