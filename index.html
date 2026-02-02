@@ -166,6 +166,120 @@
         
         .btn-secondary:hover { background: var(--border-color); }
 
+        /* ========================================
+           SOFT UI BUTTON SYSTEM
+           ======================================== */
+        .btn-soft {
+            padding: 0.5rem 0.875rem;
+            border-radius: 10px;
+            border: 2px solid var(--border-color);
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.8rem;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+        .btn-soft:hover {
+            border-color: var(--accent-blue);
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, #2d3748 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        .btn-soft:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15); }
+        .btn-soft.active, .btn-soft-primary {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            border-color: var(--accent-blue);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        .btn-soft-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+        .btn-soft-success {
+            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+            border-color: var(--success);
+            color: white;
+        }
+        .btn-soft-success:hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn-soft-warning {
+            background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+            border-color: var(--warning);
+            color: white;
+        }
+        .btn-soft-warning:hover {
+            background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        .btn-soft-danger {
+            background: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+            border-color: var(--danger);
+            color: white;
+        }
+        .btn-soft-danger:hover {
+            background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        .btn-soft-info {
+            background: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
+            border-color: var(--accent-cyan);
+            color: white;
+        }
+        .btn-soft-info:hover {
+            background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%);
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+        .btn-soft-purple {
+            background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%);
+            border-color: var(--accent-purple);
+            color: white;
+        }
+        .btn-soft-purple:hover {
+            background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+        .btn-soft-sm { padding: 0.35rem 0.65rem; font-size: 0.75rem; border-radius: 8px; }
+        .btn-soft:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* Toggle Button Group */
+        .btn-toggle-group {
+            display: inline-flex;
+            gap: 0;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            padding: 3px;
+            border: 1px solid var(--border-color);
+        }
+        .btn-toggle-group .btn-toggle {
+            padding: 0.4rem 0.75rem;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-radius: 7px;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .btn-toggle-group .btn-toggle:hover { color: var(--text-primary); background: rgba(59, 130, 246, 0.1); }
+        .btn-toggle-group .btn-toggle.active {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
         .export-dropdown {
             position: relative;
             display: inline-block;
@@ -596,7 +710,328 @@
         .map-info-overlay .coords { color: var(--accent-cyan); }
         .map-info-overlay .zoom-level { color: var(--text-muted); margin-left: 0.5rem; }
         .map-info-overlay .jurisdiction { color: var(--text-secondary); display: block; margin-top: 0.125rem; }
-        
+
+        /* ========================================
+           FLOATING PANELS - BASE STYLES
+           ======================================== */
+        .floating-panel {
+            position: absolute;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        .floating-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .floating-panel-header:hover { background: rgba(59, 130, 246, 0.05); }
+        .floating-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+        .floating-panel-title .icon { font-size: 1rem; }
+        .floating-panel-toggle {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+        }
+        .floating-panel.collapsed .floating-panel-toggle { transform: rotate(-90deg); }
+        .floating-panel-body {
+            padding: 0.75rem 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+            transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+        }
+        .floating-panel.collapsed .floating-panel-body {
+            max-height: 0;
+            padding: 0 1rem;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        /* Map Selection Panel (Left) */
+        .map-selection-panel {
+            top: 10px;
+            left: 10px;
+            width: 300px;
+            max-height: calc(100% - 100px);
+        }
+        .map-selection-panel .location-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .map-selection-panel .location-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .map-selection-panel .location-item:last-child { border-bottom: none; }
+        .map-selection-panel .location-item:hover { background: rgba(59, 130, 246, 0.1); }
+        .map-selection-panel .location-item.selected { background: rgba(59, 130, 246, 0.2); }
+        .map-selection-panel .location-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-blue);
+        }
+        .map-selection-panel .location-name {
+            flex: 1;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+        }
+        .map-selection-panel .location-id {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .map-selection-panel .search-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            margin-bottom: 0.75rem;
+        }
+        .map-selection-panel .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        /* Stats Overlay Panel (Right) */
+        .map-stats-panel {
+            top: 10px;
+            right: 10px;
+            width: 280px;
+        }
+        .map-stats-panel .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .map-stats-panel .stat-item {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 0.6rem;
+            text-align: center;
+        }
+        .map-stats-panel .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .map-stats-panel .stat-value.fatal { color: var(--danger); }
+        .map-stats-panel .stat-value.warning { color: var(--warning); }
+        .map-stats-panel .stat-value.success { color: var(--success); }
+        .map-stats-panel .stat-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 0.2rem;
+        }
+        .map-stats-panel .location-header {
+            background: var(--bg-tertiary);
+            padding: 0.6rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+        .map-stats-panel .location-id-display {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .map-stats-panel .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.4rem;
+            margin-top: 0.75rem;
+        }
+        .map-stats-panel .action-buttons .btn-soft {
+            justify-content: center;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.5rem;
+        }
+        .map-stats-panel .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .map-stats-panel .checkbox-row input {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--accent-blue);
+        }
+
+        /* Drawing Selection Panel (Bottom-Left) */
+        .drawing-selection-panel {
+            bottom: 80px;
+            left: 10px;
+            width: 320px;
+            display: none;
+        }
+        .drawing-selection-panel.visible { display: block; }
+        .drawing-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Asset Layers Panel (Bottom-Left) */
+        .asset-layers-panel {
+            bottom: 10px;
+            left: 10px;
+            width: 280px;
+        }
+        .asset-layers-panel .layer-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .asset-layers-panel .layer-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0;
+            font-size: 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .asset-layers-panel .layer-item:last-child { border-bottom: none; }
+        .asset-layers-panel .layer-item input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--accent-blue);
+        }
+        .asset-layers-panel .layer-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+        .asset-layers-panel .layer-count {
+            margin-left: auto;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
+            padding: 0.15rem 0.4rem;
+            border-radius: 10px;
+        }
+
+        /* Drawing Toolbar */
+        .drawing-toolbar {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(12px);
+            padding: 0.5rem 0.75rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+        .drawing-toolbar .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border-color);
+            margin: 0 0.25rem;
+        }
+        .drawing-tool-btn {
+            padding: 0.4rem 0.65rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s;
+        }
+        .drawing-tool-btn:hover {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+        }
+        .drawing-tool-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+        }
+        .drawing-tool-btn.danger:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
+        /* Measure Tooltip */
+        .measure-tooltip {
+            background: rgba(245, 158, 11, 0.95) !important;
+            border: none !important;
+            border-radius: 4px !important;
+            color: white !important;
+            font-weight: 600 !important;
+            font-size: 0.8rem !important;
+            padding: 0.25rem 0.5rem !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        .measure-tooltip::before {
+            border-top-color: rgba(245, 158, 11, 0.95) !important;
+        }
+
+        /* Radius display for circle drawing */
+        .radius-display {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(17, 24, 39, 0.95);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            z-index: 1000;
+            display: none;
+        }
+        .radius-display.visible { display: block; }
+
         .loading-overlay {
             position: absolute;
             top: 0;
@@ -974,6 +1409,219 @@
 
         <section class="map-section">
             <div id="map"></div>
+
+            <!-- Drawing Toolbar -->
+            <div class="drawing-toolbar" id="drawingToolbar">
+                <button class="drawing-tool-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Polygon - Click to add vertices, double-click to finish">
+                    <span>⬡</span> Polygon
+                </button>
+                <button class="drawing-tool-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Circle - Click center, drag to set radius">
+                    <span>◯</span> Circle
+                </button>
+                <button class="drawing-tool-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure - Draw a line to measure distance">
+                    <span>📏</span> Measure
+                </button>
+                <div class="toolbar-divider"></div>
+                <button class="drawing-tool-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear all drawings">
+                    <span>✕</span> Clear
+                </button>
+                <button class="drawing-tool-btn" id="btnExportKML" onclick="exportDrawingsToKML()" title="Export drawings to KML">
+                    <span>🌍</span> Export KML
+                </button>
+                <div class="toolbar-divider"></div>
+                <div class="btn-toggle-group">
+                    <button class="btn-toggle active" onclick="switchMapStyle('street')" id="btnStreetView">
+                        <span>🗺️</span> Street
+                    </button>
+                    <button class="btn-toggle" onclick="switchMapStyle('satellite')" id="btnSatelliteView">
+                        <span>🛰️</span> Satellite
+                    </button>
+                </div>
+            </div>
+
+            <!-- Select Location Panel (Left) -->
+            <div class="floating-panel map-selection-panel" id="mapSelectionPanel">
+                <div class="floating-panel-header" onclick="togglePanel('mapSelectionPanel')">
+                    <div class="floating-panel-title">
+                        <span class="icon">📍</span>
+                        <span>Select Location</span>
+                    </div>
+                    <div class="floating-panel-toggle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="floating-panel-body">
+                    <input type="text" class="search-input" placeholder="Filter locations..." id="locationFilterInput" oninput="filterLocationList()">
+                    <div class="location-list" id="locationList">
+                        <!-- Location items will be dynamically added -->
+                        <div class="location-item" onclick="selectLocation('loc1')">
+                            <input type="checkbox" id="loc1" onchange="onLocationSelect(this)">
+                            <span class="location-name">Sample Location 1</span>
+                            <span class="location-id">ID: 12345</span>
+                        </div>
+                        <div class="location-item" onclick="selectLocation('loc2')">
+                            <input type="checkbox" id="loc2" onchange="onLocationSelect(this)">
+                            <span class="location-name">Sample Location 2</span>
+                            <span class="location-id">ID: 12346</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Panel (Right) -->
+            <div class="floating-panel map-stats-panel" id="mapStatsPanel">
+                <div class="floating-panel-header" onclick="togglePanel('mapStatsPanel')">
+                    <div class="floating-panel-title">
+                        <span class="icon">📊</span>
+                        <span>Stats</span>
+                    </div>
+                    <div class="floating-panel-toggle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="floating-panel-body">
+                    <div class="location-header">
+                        <div class="location-id-display" id="statsLocationId">Select a location</div>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="statTotal">0</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value fatal" id="statFatal">0</div>
+                            <div class="stat-label">Fatal</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value warning" id="statKA">0</div>
+                            <div class="stat-label">K+A</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statEPDO">0</div>
+                            <div class="stat-label">EPDO</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value success" id="statPed">0</div>
+                            <div class="stat-label">Ped</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value success" id="statBike">0</div>
+                            <div class="stat-label">Bike</div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-soft btn-soft-warning btn-soft-sm" onclick="openCMF()">💡 CMF</button>
+                        <button class="btn-soft btn-soft-info btn-soft-sm" onclick="openMUTCD()">📘 MUTCD</button>
+                        <button class="btn-soft btn-soft-purple btn-soft-sm" onclick="openWarrants()">📋 Warrants</button>
+                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="openGrants()">💰 Grants</button>
+                        <button class="btn-soft btn-soft-info btn-soft-sm" onclick="openBAStudy()">📈 B/A Study</button>
+                        <button class="btn-soft btn-soft-primary btn-soft-sm" onclick="analyzeLocation()">🔍 Analyze</button>
+                        <button class="btn-soft btn-soft-sm" onclick="analyzeAssets()">🏗️ Analyze Assets</button>
+                        <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="generatePDFReport()">📄 PDF Report</button>
+                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportStatsData()">📥 Export</button>
+                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportStatsKML()">🌍 KML</button>
+                    </div>
+                    <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="clearStatsSelection()" style="width: 100%; margin-top: 0.5rem; justify-content: center;">
+                        ✕ Clear
+                    </button>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="showRouteLabels" onchange="toggleRouteLabels()">
+                        <label for="showRouteLabels">Show route labels</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Asset Layers Panel (Bottom-Left) -->
+            <div class="floating-panel asset-layers-panel" id="assetLayersPanel">
+                <div class="floating-panel-header" onclick="togglePanel('assetLayersPanel')">
+                    <div class="floating-panel-title">
+                        <span class="icon">🗂️</span>
+                        <span>Asset Layers</span>
+                    </div>
+                    <div class="floating-panel-toggle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="floating-panel-body">
+                    <div class="layer-controls">
+                        <button class="btn-soft btn-soft-primary btn-soft-sm" onclick="showAllLayers()">
+                            <span>👁️</span> Show All
+                        </button>
+                        <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="hideAllLayers()">
+                            <span>🚫</span> Hide All
+                        </button>
+                    </div>
+                    <div class="layer-list" id="layerList">
+                        <div class="layer-item">
+                            <input type="checkbox" id="layerRoads" checked onchange="toggleLayer('roads')">
+                            <span class="layer-icon">🛣️</span>
+                            <label for="layerRoads">Roads</label>
+                            <span class="layer-count" id="layerRoadsCount">0</span>
+                        </div>
+                        <div class="layer-item">
+                            <input type="checkbox" id="layerIntersections" onchange="toggleLayer('intersections')">
+                            <span class="layer-icon">✚</span>
+                            <label for="layerIntersections">Intersections</label>
+                            <span class="layer-count" id="layerIntersectionsCount">0</span>
+                        </div>
+                        <div class="layer-item">
+                            <input type="checkbox" id="layerSignals" onchange="toggleLayer('signals')">
+                            <span class="layer-icon">🚦</span>
+                            <label for="layerSignals">Traffic Signals</label>
+                            <span class="layer-count" id="layerSignalsCount">0</span>
+                        </div>
+                        <div class="layer-item">
+                            <input type="checkbox" id="layerSigns" onchange="toggleLayer('signs')">
+                            <span class="layer-icon">🛑</span>
+                            <label for="layerSigns">Signs</label>
+                            <span class="layer-count" id="layerSignsCount">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drawing Selection Panel (shown after drawing) -->
+            <div class="floating-panel drawing-selection-panel" id="drawingSelectionPanel">
+                <div class="floating-panel-header" onclick="togglePanel('drawingSelectionPanel')">
+                    <div class="floating-panel-title">
+                        <span class="icon">✏️</span>
+                        <span>Drawing Selection</span>
+                    </div>
+                    <div class="floating-panel-toggle">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="floating-panel-body">
+                    <div class="drawing-stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="drawingTotal">0</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value fatal" id="drawingFatal">0</div>
+                            <div class="stat-label">Fatal</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="drawingArea">0</div>
+                            <div class="stat-label">Area (sq mi)</div>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-soft btn-soft-primary btn-soft-sm" onclick="analyzeDrawingSelection()">🔍 Analyze</button>
+                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportDrawingSelection()">📥 Export</button>
+                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportDrawingKML()">🌍 KML</button>
+                        <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="clearDrawingSelection()">✕ Clear</button>
+                    </div>
+                </div>
+            </div>
 
             <div class="map-search-box">
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2413,11 +3061,542 @@
         }
 
         // =====================================================
+        // FLOATING PANELS - TOGGLE FUNCTIONS
+        // =====================================================
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            if (panel) {
+                panel.classList.toggle('collapsed');
+            }
+        }
+
+        // =====================================================
+        // DRAWING TOOLS - STATE AND FUNCTIONS
+        // =====================================================
+        let currentDrawingMode = null;
+        let drawnItems = null;
+        let drawingPoints = [];
+        let currentDrawLayer = null;
+        let measureTooltip = null;
+
+        function initDrawingTools() {
+            // Initialize feature group for drawn items
+            drawnItems = L.featureGroup().addTo(map);
+        }
+
+        function startDrawing(mode) {
+            // Clear any active drawing mode first
+            cancelDrawing();
+
+            // Set new mode
+            currentDrawingMode = mode;
+            drawingPoints = [];
+
+            // Update button states
+            document.querySelectorAll('.drawing-tool-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('btnDraw' + mode.charAt(0).toUpperCase() + mode.slice(1));
+            if (activeBtn) activeBtn.classList.add('active');
+            if (mode === 'measure') document.getElementById('btnMeasure').classList.add('active');
+
+            // Set cursor style
+            document.getElementById('map').style.cursor = 'crosshair';
+
+            // Add click handler based on mode
+            if (mode === 'polygon') {
+                map.on('click', onPolygonClick);
+                map.on('dblclick', finishPolygon);
+            } else if (mode === 'circle') {
+                map.on('click', onCircleClick);
+            } else if (mode === 'measure') {
+                map.on('click', onMeasureClick);
+                map.on('dblclick', finishMeasure);
+            }
+        }
+
+        function cancelDrawing() {
+            currentDrawingMode = null;
+            drawingPoints = [];
+
+            // Remove event listeners
+            map.off('click', onPolygonClick);
+            map.off('click', onCircleClick);
+            map.off('click', onMeasureClick);
+            map.off('dblclick', finishPolygon);
+            map.off('dblclick', finishMeasure);
+            map.off('mousemove', onCircleDrag);
+
+            // Reset cursor
+            document.getElementById('map').style.cursor = '';
+
+            // Remove temporary layers
+            if (currentDrawLayer) {
+                map.removeLayer(currentDrawLayer);
+                currentDrawLayer = null;
+            }
+
+            // Clear button active states
+            document.querySelectorAll('.drawing-tool-btn').forEach(btn => btn.classList.remove('active'));
+        }
+
+        function onPolygonClick(e) {
+            drawingPoints.push(e.latlng);
+
+            // Update visual
+            if (currentDrawLayer) {
+                map.removeLayer(currentDrawLayer);
+            }
+
+            if (drawingPoints.length > 1) {
+                currentDrawLayer = L.polyline(drawingPoints, {
+                    color: '#3b82f6',
+                    weight: 3,
+                    dashArray: '5, 10'
+                }).addTo(map);
+            } else {
+                currentDrawLayer = L.circleMarker(e.latlng, {
+                    radius: 5,
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 1
+                }).addTo(map);
+            }
+        }
+
+        function finishPolygon(e) {
+            if (drawingPoints.length < 3) {
+                alert('Please add at least 3 points to create a polygon');
+                return;
+            }
+
+            // Remove temporary layer
+            if (currentDrawLayer) {
+                map.removeLayer(currentDrawLayer);
+            }
+
+            // Create final polygon
+            const polygon = L.polygon(drawingPoints, {
+                color: '#3b82f6',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.2,
+                weight: 2
+            }).addTo(drawnItems);
+
+            // Calculate area
+            const area = calculatePolygonArea(drawingPoints);
+            polygon.bindPopup(`<strong>Polygon</strong><br>Area: ${area.toFixed(2)} sq mi`);
+
+            // Show drawing selection panel
+            showDrawingSelectionPanel(polygon, 'polygon');
+
+            cancelDrawing();
+        }
+
+        function onCircleClick(e) {
+            if (!currentDrawLayer) {
+                // First click - set center
+                drawingPoints = [e.latlng];
+                currentDrawLayer = L.circle(e.latlng, {
+                    radius: 100,
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.2,
+                    dashArray: '5, 10'
+                }).addTo(map);
+
+                // Add mousemove to adjust radius
+                map.on('mousemove', onCircleDrag);
+            } else {
+                // Second click - finish circle
+                finishCircle(e);
+            }
+        }
+
+        function onCircleDrag(e) {
+            if (currentDrawLayer && drawingPoints.length > 0) {
+                const center = drawingPoints[0];
+                const radius = center.distanceTo(e.latlng);
+                currentDrawLayer.setRadius(radius);
+            }
+        }
+
+        function finishCircle(e) {
+            if (!currentDrawLayer || drawingPoints.length === 0) return;
+
+            const center = drawingPoints[0];
+            const radius = center.distanceTo(e.latlng);
+
+            // Remove temporary layer
+            map.removeLayer(currentDrawLayer);
+            map.off('mousemove', onCircleDrag);
+
+            // Create final circle
+            const circle = L.circle(center, {
+                radius: radius,
+                color: '#3b82f6',
+                fillColor: '#3b82f6',
+                fillOpacity: 0.2,
+                weight: 2
+            }).addTo(drawnItems);
+
+            // Calculate area
+            const areaSqM = Math.PI * Math.pow(radius, 2);
+            const areaSqMi = areaSqM / 2589988.11; // Convert to square miles
+            circle.bindPopup(`<strong>Circle</strong><br>Radius: ${(radius / 1609.34).toFixed(2)} mi<br>Area: ${areaSqMi.toFixed(2)} sq mi`);
+
+            // Show drawing selection panel
+            showDrawingSelectionPanel(circle, 'circle');
+
+            cancelDrawing();
+        }
+
+        function onMeasureClick(e) {
+            drawingPoints.push(e.latlng);
+
+            // Update visual
+            if (currentDrawLayer) {
+                map.removeLayer(currentDrawLayer);
+            }
+
+            if (drawingPoints.length > 1) {
+                currentDrawLayer = L.polyline(drawingPoints, {
+                    color: '#f59e0b',
+                    weight: 3,
+                    dashArray: '10, 5'
+                }).addTo(map);
+
+                // Show distance
+                const totalDistance = calculateTotalDistance(drawingPoints);
+                if (measureTooltip) {
+                    map.removeLayer(measureTooltip);
+                }
+                measureTooltip = L.tooltip({
+                    permanent: true,
+                    direction: 'center',
+                    className: 'measure-tooltip'
+                })
+                .setLatLng(e.latlng)
+                .setContent(`${(totalDistance / 1609.34).toFixed(2)} mi`)
+                .addTo(map);
+            }
+        }
+
+        function finishMeasure(e) {
+            if (drawingPoints.length < 2) {
+                alert('Please add at least 2 points to measure');
+                return;
+            }
+
+            const totalDistance = calculateTotalDistance(drawingPoints);
+
+            // Keep the line but make it permanent
+            if (currentDrawLayer) {
+                currentDrawLayer.setStyle({ dashArray: null });
+                currentDrawLayer.bindPopup(`<strong>Measurement</strong><br>Distance: ${(totalDistance / 1609.34).toFixed(2)} mi`);
+                drawnItems.addLayer(currentDrawLayer);
+                currentDrawLayer = null;
+            }
+
+            if (measureTooltip) {
+                map.removeLayer(measureTooltip);
+                measureTooltip = null;
+            }
+
+            cancelDrawing();
+        }
+
+        function calculateTotalDistance(points) {
+            let total = 0;
+            for (let i = 1; i < points.length; i++) {
+                total += points[i - 1].distanceTo(points[i]);
+            }
+            return total;
+        }
+
+        function calculatePolygonArea(points) {
+            // Simple approximation using Shoelace formula
+            // Returns area in square miles
+            if (points.length < 3) return 0;
+
+            let area = 0;
+            const n = points.length;
+
+            for (let i = 0; i < n; i++) {
+                const j = (i + 1) % n;
+                // Convert to approximate meters
+                const xi = points[i].lng * 111320 * Math.cos(points[i].lat * Math.PI / 180);
+                const yi = points[i].lat * 110540;
+                const xj = points[j].lng * 111320 * Math.cos(points[j].lat * Math.PI / 180);
+                const yj = points[j].lat * 110540;
+
+                area += xi * yj;
+                area -= xj * yi;
+            }
+
+            area = Math.abs(area) / 2;
+            // Convert square meters to square miles
+            return area / 2589988.11;
+        }
+
+        function clearAllDrawings() {
+            if (drawnItems) {
+                drawnItems.clearLayers();
+            }
+            cancelDrawing();
+            hideDrawingSelectionPanel();
+        }
+
+        function showDrawingSelectionPanel(layer, type) {
+            const panel = document.getElementById('drawingSelectionPanel');
+            panel.classList.add('visible');
+
+            // Update stats (placeholder values - would be calculated from actual data)
+            document.getElementById('drawingTotal').textContent = '0';
+            document.getElementById('drawingFatal').textContent = '0';
+
+            if (type === 'polygon') {
+                const area = calculatePolygonArea(layer.getLatLngs()[0]);
+                document.getElementById('drawingArea').textContent = area.toFixed(2);
+            } else if (type === 'circle') {
+                const radius = layer.getRadius();
+                const areaSqM = Math.PI * Math.pow(radius, 2);
+                const areaSqMi = areaSqM / 2589988.11;
+                document.getElementById('drawingArea').textContent = areaSqMi.toFixed(2);
+            }
+        }
+
+        function hideDrawingSelectionPanel() {
+            const panel = document.getElementById('drawingSelectionPanel');
+            panel.classList.remove('visible');
+        }
+
+        function exportDrawingsToKML() {
+            if (!drawnItems || drawnItems.getLayers().length === 0) {
+                alert('No drawings to export. Please draw a polygon, circle, or measurement first.');
+                return;
+            }
+
+            let kml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+            kml += '<kml xmlns="http://www.opengis.net/kml/2.2">\n';
+            kml += '<Document>\n';
+            kml += '<name>Map Drawings</name>\n';
+
+            drawnItems.eachLayer(layer => {
+                if (layer instanceof L.Polygon) {
+                    kml += '<Placemark>\n';
+                    kml += '<name>Polygon</name>\n';
+                    kml += '<Polygon><outerBoundaryIs><LinearRing><coordinates>\n';
+                    const coords = layer.getLatLngs()[0];
+                    coords.forEach(ll => {
+                        kml += `${ll.lng},${ll.lat},0 `;
+                    });
+                    kml += '\n</coordinates></LinearRing></outerBoundaryIs></Polygon>\n';
+                    kml += '</Placemark>\n';
+                } else if (layer instanceof L.Circle) {
+                    // KML doesn't support circles, so we approximate with a polygon
+                    kml += '<Placemark>\n';
+                    kml += '<name>Circle</name>\n';
+                    kml += '<Polygon><outerBoundaryIs><LinearRing><coordinates>\n';
+                    const center = layer.getLatLng();
+                    const radius = layer.getRadius();
+                    for (let i = 0; i <= 36; i++) {
+                        const angle = (i * 10) * Math.PI / 180;
+                        const lat = center.lat + (radius / 110540) * Math.cos(angle);
+                        const lng = center.lng + (radius / (111320 * Math.cos(center.lat * Math.PI / 180))) * Math.sin(angle);
+                        kml += `${lng},${lat},0 `;
+                    }
+                    kml += '\n</coordinates></LinearRing></outerBoundaryIs></Polygon>\n';
+                    kml += '</Placemark>\n';
+                } else if (layer instanceof L.Polyline) {
+                    kml += '<Placemark>\n';
+                    kml += '<name>Measurement Line</name>\n';
+                    kml += '<LineString><coordinates>\n';
+                    const coords = layer.getLatLngs();
+                    coords.forEach(ll => {
+                        kml += `${ll.lng},${ll.lat},0 `;
+                    });
+                    kml += '\n</coordinates></LineString>\n';
+                    kml += '</Placemark>\n';
+                }
+            });
+
+            kml += '</Document>\n</kml>';
+
+            // Download
+            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'drawings.kml';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // =====================================================
+        // MAP STYLE TOGGLE (Street/Satellite)
+        // =====================================================
+        function switchMapStyle(style) {
+            // Update toggle buttons
+            document.getElementById('btnStreetView').classList.remove('active');
+            document.getElementById('btnSatelliteView').classList.remove('active');
+
+            if (style === 'street') {
+                document.getElementById('btnStreetView').classList.add('active');
+                switchBasemap('CARTO Light');
+            } else {
+                document.getElementById('btnSatelliteView').classList.add('active');
+                switchBasemap('ESRI Imagery');
+            }
+        }
+
+        // =====================================================
+        // LOCATION SELECTION FUNCTIONS
+        // =====================================================
+        let selectedLocations = [];
+
+        function filterLocationList() {
+            const filter = document.getElementById('locationFilterInput').value.toLowerCase();
+            const items = document.querySelectorAll('#locationList .location-item');
+
+            items.forEach(item => {
+                const name = item.querySelector('.location-name').textContent.toLowerCase();
+                const id = item.querySelector('.location-id').textContent.toLowerCase();
+
+                if (name.includes(filter) || id.includes(filter)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function selectLocation(locId) {
+            const checkbox = document.getElementById(locId);
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                onLocationSelect(checkbox);
+            }
+        }
+
+        function onLocationSelect(checkbox) {
+            const locItem = checkbox.closest('.location-item');
+
+            if (checkbox.checked) {
+                locItem.classList.add('selected');
+                if (!selectedLocations.includes(checkbox.id)) {
+                    selectedLocations.push(checkbox.id);
+                }
+            } else {
+                locItem.classList.remove('selected');
+                selectedLocations = selectedLocations.filter(id => id !== checkbox.id);
+            }
+
+            // Update stats panel if a location is selected
+            if (selectedLocations.length > 0) {
+                updateStatsPanel(checkbox.id);
+            }
+        }
+
+        // =====================================================
+        // STATS PANEL FUNCTIONS
+        // =====================================================
+        function updateStatsPanel(locationId) {
+            // This would normally fetch real data
+            // For now, using placeholder values
+            document.getElementById('statsLocationId').textContent = `Location: ${locationId}`;
+            document.getElementById('statTotal').textContent = Math.floor(Math.random() * 100);
+            document.getElementById('statFatal').textContent = Math.floor(Math.random() * 5);
+            document.getElementById('statKA').textContent = Math.floor(Math.random() * 10);
+            document.getElementById('statEPDO').textContent = Math.floor(Math.random() * 500);
+            document.getElementById('statPed').textContent = Math.floor(Math.random() * 5);
+            document.getElementById('statBike').textContent = Math.floor(Math.random() * 3);
+        }
+
+        function clearStatsSelection() {
+            selectedLocations = [];
+            document.querySelectorAll('#locationList .location-item').forEach(item => {
+                item.classList.remove('selected');
+                const cb = item.querySelector('input[type="checkbox"]');
+                if (cb) cb.checked = false;
+            });
+
+            document.getElementById('statsLocationId').textContent = 'Select a location';
+            document.getElementById('statTotal').textContent = '0';
+            document.getElementById('statFatal').textContent = '0';
+            document.getElementById('statKA').textContent = '0';
+            document.getElementById('statEPDO').textContent = '0';
+            document.getElementById('statPed').textContent = '0';
+            document.getElementById('statBike').textContent = '0';
+        }
+
+        function toggleRouteLabels() {
+            const show = document.getElementById('showRouteLabels').checked;
+            // Toggle route label visibility on map
+            console.log('Route labels:', show ? 'shown' : 'hidden');
+        }
+
+        // Stats panel action button placeholders
+        function openCMF() { alert('CMF feature - Coming soon'); }
+        function openMUTCD() { alert('MUTCD feature - Coming soon'); }
+        function openWarrants() { alert('Warrants feature - Coming soon'); }
+        function openGrants() { alert('Grants feature - Coming soon'); }
+        function openBAStudy() { alert('B/A Study feature - Coming soon'); }
+        function analyzeLocation() { alert('Analyze Location feature - Coming soon'); }
+        function analyzeAssets() { alert('Analyze Assets feature - Coming soon'); }
+        function generatePDFReport() { alert('PDF Report feature - Coming soon'); }
+        function exportStatsData() { alert('Export Stats feature - Coming soon'); }
+        function exportStatsKML() { alert('Export KML feature - Coming soon'); }
+
+        // =====================================================
+        // ASSET LAYERS FUNCTIONS
+        // =====================================================
+        const layerVisibility = {
+            roads: true,
+            intersections: false,
+            signals: false,
+            signs: false
+        };
+
+        function toggleLayer(layerId) {
+            layerVisibility[layerId] = !layerVisibility[layerId];
+            console.log(`Layer ${layerId}:`, layerVisibility[layerId] ? 'visible' : 'hidden');
+            // Would toggle actual map layer visibility here
+        }
+
+        function showAllLayers() {
+            Object.keys(layerVisibility).forEach(layerId => {
+                layerVisibility[layerId] = true;
+                const checkbox = document.getElementById('layer' + layerId.charAt(0).toUpperCase() + layerId.slice(1));
+                if (checkbox) checkbox.checked = true;
+            });
+            console.log('All layers shown');
+        }
+
+        function hideAllLayers() {
+            Object.keys(layerVisibility).forEach(layerId => {
+                layerVisibility[layerId] = false;
+                const checkbox = document.getElementById('layer' + layerId.charAt(0).toUpperCase() + layerId.slice(1));
+                if (checkbox) checkbox.checked = false;
+            });
+            console.log('All layers hidden');
+        }
+
+        // =====================================================
+        // DRAWING SELECTION PANEL FUNCTIONS
+        // =====================================================
+        function analyzeDrawingSelection() { alert('Analyze Drawing Selection - Coming soon'); }
+        function exportDrawingSelection() { alert('Export Drawing Selection - Coming soon'); }
+        function exportDrawingKML() { exportDrawingsToKML(); }
+        function clearDrawingSelection() {
+            clearAllDrawings();
+        }
+
+        // =====================================================
         // INITIALIZATION
         // =====================================================
         document.addEventListener('DOMContentLoaded', async () => {
             await initDB();
             initMap();
+            initDrawingTools();
         });
     </script>
 </body>
