@@ -165,6 +165,129 @@
         }
         
         .btn-secondary:hover { background: var(--border-color); }
+
+        .export-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .export-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            z-index: 1001;
+            min-width: 100px;
+            margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .export-menu.show { display: block; }
+
+        .export-menu button {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .export-menu button:hover { background: var(--bg-tertiary); }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-input:focus { outline: none; border-color: var(--accent-blue); }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .saved-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        .saved-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .saved-item-info { flex: 1; }
+        .saved-item-name { font-weight: 600; color: var(--text-primary); }
+        .saved-item-meta { color: var(--text-muted); font-size: 0.625rem; }
+
+        .saved-item-actions { display: flex; gap: 0.25rem; }
+
+        .saved-item-btn {
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            color: var(--text-primary);
+            font-size: 0.625rem;
+            cursor: pointer;
+        }
+
+        .saved-item-btn:hover { background: var(--border-color); }
+        .saved-item-btn.delete { color: var(--danger); }
         
         .main-container {
             display: grid;
@@ -548,8 +671,9 @@
         .road-list-section {
             border-top: 1px solid var(--border-color);
             padding: 1rem;
-            max-height: 300px;
+            flex: 1;
             overflow-y: auto;
+            min-height: 200px;
         }
         
         .road-list-header {
@@ -667,13 +791,31 @@
             </div>
             
             <div class="header-actions">
-                <button class="btn btn-secondary" onclick="exportData()">
+                <div class="export-dropdown">
+                    <button class="btn btn-secondary" onclick="toggleExportMenu()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </button>
+                    <div class="export-menu" id="exportMenu">
+                        <button onclick="exportData('geojson')">GeoJSON</button>
+                        <button onclick="exportData('csv')">CSV</button>
+                        <button onclick="exportData('kml')">KML</button>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="openSaveModal()" title="Save Selection">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7,10 12,15 17,10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
                     </svg>
-                    Export
+                    Save
                 </button>
                 <button class="btn btn-primary" id="loadBtn" onclick="loadRoadData()">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -857,6 +999,19 @@
         </aside>
     </div>
 
+    <!-- Save/Load Modal -->
+    <div class="modal-overlay" id="saveModal">
+        <div class="modal-content">
+            <div class="modal-title">Save / Load Selections</div>
+            <div class="saved-list" id="savedList"></div>
+            <input type="text" class="modal-input" id="saveName" placeholder="Enter name for this selection...">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeSaveModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCurrentSelection()">Save Current</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <script>
@@ -1034,15 +1189,92 @@
         // State
         let map, boundaryLayer, roadLayers = {}, roadsData = [], allGeoJson = null;
         let currentJurisdiction = null, selectedRoad = null, activeFilter = null, layersVisible = true;
+        let currentBoundaryPolygon = null; // Store actual TigerWeb boundary polygon for filtering
+
+        // =====================================================
+        // GEOMETRY UTILITIES - Point-in-Polygon & Line Clipping
+        // =====================================================
+        function pointInPolygon(point, polygon) {
+            // Ray casting algorithm for point-in-polygon test
+            const [x, y] = point;
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const [xi, yi] = polygon[i];
+                const [xj, yj] = polygon[j];
+                if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        function lineIntersectsPolygon(lineCoords, polygonRings) {
+            // Check if any point of the line is inside the polygon
+            // Use first ring (outer boundary) for simplicity
+            const outerRing = polygonRings[0];
+            for (const coord of lineCoords) {
+                if (pointInPolygon([coord[1], coord[0]], outerRing)) { // [lon, lat] format for polygon
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function lineSegmentIntersectsBoundary(coords, polygonRings) {
+            // Check if line segment has significant portion inside boundary
+            // At least one point must be inside, or line crosses boundary
+            const outerRing = polygonRings[0];
+            let insideCount = 0;
+            for (const coord of coords) {
+                if (pointInPolygon([coord[1], coord[0]], outerRing)) {
+                    insideCount++;
+                }
+            }
+            // Return true if at least 20% of points are inside (handles edge cases)
+            return insideCount > 0 && (insideCount / coords.length) >= 0.2;
+        }
+
+        function extractPolygonCoords(geoJsonFeature) {
+            // Extract polygon coordinates from GeoJSON feature
+            if (!geoJsonFeature || !geoJsonFeature.geometry) return null;
+            const geom = geoJsonFeature.geometry;
+            if (geom.type === 'Polygon') {
+                return geom.coordinates;
+            } else if (geom.type === 'MultiPolygon') {
+                // Flatten MultiPolygon to single polygon rings (use largest)
+                let largest = null;
+                let maxArea = 0;
+                for (const poly of geom.coordinates) {
+                    const area = calculateRingArea(poly[0]);
+                    if (area > maxArea) {
+                        maxArea = area;
+                        largest = poly;
+                    }
+                }
+                return largest;
+            }
+            return null;
+        }
+
+        function calculateRingArea(ring) {
+            // Shoelace formula for polygon area
+            let area = 0;
+            for (let i = 0; i < ring.length - 1; i++) {
+                area += ring[i][0] * ring[i + 1][1];
+                area -= ring[i + 1][0] * ring[i][1];
+            }
+            return Math.abs(area / 2);
+        }
         
         // =====================================================
         // INITIALIZATION
         // =====================================================
         function initMap() {
             map = L.map('map', { center: [37.54, -78.5], zoom: 7, zoomControl: false });
-            
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+
+            // ESRI World Street Map
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri', maxZoom: 19
             }).addTo(map);
             
             L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -1143,6 +1375,9 @@
             if (boundaryLayer) map.removeLayer(boundaryLayer);
             
             if (geoJson && geoJson.features && geoJson.features.length > 0) {
+                // Store the boundary polygon for filtering roads
+                currentBoundaryPolygon = extractPolygonCoords(geoJson.features[0]);
+
                 boundaryLayer = L.geoJSON(geoJson, {
                     style: {
                         color: '#3b82f6',
@@ -1152,7 +1387,7 @@
                         dashArray: '8, 4'
                     }
                 }).addTo(map);
-                
+
                 // Calculate area
                 const feature = geoJson.features[0];
                 if (feature.properties) {
@@ -1162,18 +1397,22 @@
                         document.getElementById('areaDisplay').textContent = `${sqMiles} sq mi`;
                     }
                 }
-                
+
                 map.fitBounds(boundaryLayer.getBounds(), { padding: [20, 20] });
             } else {
-                // Fallback to bbox rectangle
+                // Fallback to bbox rectangle - no polygon filtering available
+                currentBoundaryPolygon = null;
                 const [west, south, east, north] = j.bbox;
                 boundaryLayer = L.rectangle([[south, west], [north, east]], {
                     color: '#3b82f6', weight: 2, fill: false, dashArray: '5, 5'
                 }).addTo(map);
                 document.getElementById('areaDisplay').textContent = 'N/A';
             }
-            
+
             hideLoading();
+
+            // Auto-load roads after boundary is set
+            await loadRoadData();
         }
         
         // =====================================================
@@ -1224,7 +1463,10 @@
                     <h3>✓ ${j.name} Loaded</h3>
                     <p>${roadsData.length.toLocaleString()} road segments loaded with TIGERweb boundary.</p>
                 `;
-                
+
+                // Auto-display all segments summary in Road Details
+                displayAllSegmentsSummary();
+
                 hideLoading();
                 
             } catch (error) {
@@ -1241,18 +1483,30 @@
         
         function processRoadData(data) {
             if (!data.elements?.length) return;
-            
+
             allGeoJson = { type: 'FeatureCollection', features: [] };
-            
+            let filteredCount = 0;
+            let totalCount = 0;
+
             data.elements.forEach(el => {
                 if (el.type !== 'way' || !el.geometry) return;
-                
+                totalCount++;
+
                 const tags = el.tags || {};
                 const highway = tags.highway;
                 const funcClass = OSM_TO_VDOT[highway] || '7';
                 const coords = el.geometry.map(p => [p.lat, p.lon]);
+
+                // Filter by TigerWeb boundary polygon if available
+                if (currentBoundaryPolygon) {
+                    if (!lineSegmentIntersectsBoundary(coords, currentBoundaryPolygon)) {
+                        filteredCount++;
+                        return; // Skip roads outside the actual boundary
+                    }
+                }
+
                 const length = calcLength(coords);
-                
+
                 const road = {
                     id: el.id,
                     name: tags.name || tags.ref || `Unnamed ${highway}`,
@@ -1263,16 +1517,18 @@
                     surface: tags.surface || '',
                     length, coords
                 };
-                
+
                 roadsData.push(road);
                 addRoadToMap(road);
-                
+
                 allGeoJson.features.push({
                     type: 'Feature',
                     properties: { osm_id: el.id, name: road.name, highway, funcClass, ref: road.ref, length_miles: length },
                     geometry: { type: 'LineString', coordinates: coords.map(c => [c[1], c[0]]) }
                 });
             });
+
+            console.log(`Boundary filter: ${filteredCount} of ${totalCount} segments filtered out`);
         }
         
         function calcLength(coords) {
@@ -1397,8 +1653,9 @@
         }
         
         function updateRoadTable(data = null) {
-            const d = (data || roadsData).slice(0, 150);
-            document.getElementById('roadTableBody').innerHTML = d.map(r => {
+            const allData = data || roadsData;
+            // Show all segments (removed 150 limit per user request)
+            document.getElementById('roadTableBody').innerHTML = allData.map(r => {
                 const fc = FC_STYLES[r.funcClass];
                 return `<tr data-id="${r.id}" onclick="selectRoadById(${r.id})">
                     <td><span class="class-dot" style="background:${fc.color}"></span>${r.name.substring(0,20)}${r.name.length>20?'...':''}</td>
@@ -1406,10 +1663,73 @@
                     <td>${r.highway}</td>
                 </tr>`;
             }).join('');
-            document.getElementById('roadListCount').textContent = `${(data||roadsData).length.toLocaleString()} segments`;
+            document.getElementById('roadListCount').textContent = `${allData.length.toLocaleString()} segments`;
         }
         
         function selectRoadById(id) { const r = roadsData.find(x => x.id === id); if (r) selectRoad(r); }
+
+        function displayAllSegmentsSummary() {
+            if (!roadsData.length) return;
+
+            const j = JURISDICTIONS[currentJurisdiction];
+            const totalMiles = roadsData.reduce((s, r) => s + r.length, 0);
+
+            // Calculate breakdown by functional class
+            const fcBreakdown = {};
+            for (let fc = 1; fc <= 7; fc++) {
+                const roads = roadsData.filter(r => r.funcClass === String(fc));
+                fcBreakdown[fc] = {
+                    count: roads.length,
+                    miles: roads.reduce((s, r) => s + r.length, 0)
+                };
+            }
+
+            let summaryHtml = `
+                <div class="road-card">
+                    <div class="road-card-header">
+                        <span class="road-class-badge" style="background: var(--accent-cyan); color: #000;">ALL</span>
+                        <span class="road-name">${j?.name || 'Jurisdiction'} Summary</span>
+                    </div>
+                    <div class="road-card-body">
+                        <div class="detail-row">
+                            <span class="detail-label">Total Segments</span>
+                            <span class="detail-value">${roadsData.length.toLocaleString()}</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">Total Miles</span>
+                            <span class="detail-value">${totalMiles.toFixed(2)} mi</span>
+                        </div>
+                        <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+                            <div class="detail-label" style="margin-bottom: 0.5rem;">Breakdown by Class:</div>
+            `;
+
+            for (let fc = 1; fc <= 7; fc++) {
+                const data = fcBreakdown[fc];
+                const style = FC_STYLES[fc];
+                if (data.count > 0) {
+                    summaryHtml += `
+                        <div class="detail-row">
+                            <span class="detail-label">
+                                <span class="class-dot" style="background:${style.color}"></span>
+                                FC ${fc} - ${style.name}
+                            </span>
+                            <span class="detail-value">${data.count} (${data.miles.toFixed(1)} mi)</span>
+                        </div>
+                    `;
+                }
+            }
+
+            summaryHtml += `
+                        </div>
+                    </div>
+                </div>
+                <p style="font-size: 0.625rem; color: var(--text-muted); margin-top: 0.75rem; text-align: center;">
+                    Click any road segment on the map or list for details
+                </p>
+            `;
+
+            document.getElementById('roadDetails').innerHTML = summaryHtml;
+        }
         
         function resetView() {
             if (currentJurisdiction) {
@@ -1444,6 +1764,7 @@
         
         function clearData() {
             clearRoads();
+            currentBoundaryPolygon = null;
             updateStats();
             updateRoadTable();
             document.getElementById('roadDetails').innerHTML = `<div class="no-selection"><div class="no-selection-icon">🛣️</div><p>Select a jurisdiction and load roads.</p></div>`;
@@ -1451,20 +1772,329 @@
             document.getElementById('infoBanner').innerHTML = `<h3>🗺️ TIGERweb + OSM Data</h3><p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data.</p>`;
         }
         
-        function exportData() {
+        // =====================================================
+        // EXPORT FUNCTIONS
+        // =====================================================
+        function toggleExportMenu() {
+            document.getElementById('exportMenu').classList.toggle('show');
+        }
+
+        // Close export menu when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.export-dropdown')) {
+                document.getElementById('exportMenu')?.classList.remove('show');
+            }
+        });
+
+        function exportData(format) {
+            document.getElementById('exportMenu').classList.remove('show');
             if (!allGeoJson?.features?.length) { alert('No data to export.'); return; }
+
             const j = JURISDICTIONS[currentJurisdiction];
-            const name = j?.name?.toLowerCase().replace(/\s+/g, '_') || 'virginia';
+            const baseName = j?.name?.toLowerCase().replace(/\s+/g, '_') || 'virginia';
+
+            switch(format) {
+                case 'geojson':
+                    exportGeoJSON(baseName);
+                    break;
+                case 'csv':
+                    exportCSV(baseName);
+                    break;
+                case 'kml':
+                    exportKML(baseName);
+                    break;
+            }
+        }
+
+        function exportGeoJSON(baseName) {
             const blob = new Blob([JSON.stringify(allGeoJson, null, 2)], { type: 'application/json' });
+            downloadBlob(blob, `${baseName}_vdot_roads.geojson`);
+        }
+
+        function exportCSV(baseName) {
+            const headers = ['OSM_ID', 'Name', 'Highway_Type', 'Functional_Class', 'FC_Name', 'Route_Ref', 'Length_Miles', 'Lanes', 'Speed_Limit'];
+            const rows = [headers.join(',')];
+
+            roadsData.forEach(road => {
+                const fcName = FC_STYLES[road.funcClass]?.name || '';
+                const row = [
+                    road.id,
+                    `"${(road.name || '').replace(/"/g, '""')}"`,
+                    road.highway,
+                    road.funcClass,
+                    `"${fcName}"`,
+                    `"${road.ref || ''}"`,
+                    road.length.toFixed(4),
+                    road.lanes || '',
+                    `"${road.maxspeed || ''}"`
+                ];
+                rows.push(row.join(','));
+            });
+
+            const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+            downloadBlob(blob, `${baseName}_vdot_roads.csv`);
+        }
+
+        function exportKML(baseName) {
+            const j = JURISDICTIONS[currentJurisdiction];
+            let kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+    <name>${j?.name || 'Virginia'} VDOT Roads</name>
+    <description>VDOT Road Classification data exported from Crash Lens</description>
+`;
+            // Add styles for each functional class
+            for (const [fc, style] of Object.entries(FC_STYLES)) {
+                const color = style.color.replace('#', '');
+                // KML uses AABBGGRR format
+                const kmlColor = 'ff' + color.substring(4, 6) + color.substring(2, 4) + color.substring(0, 2);
+                kml += `    <Style id="fc${fc}">
+        <LineStyle>
+            <color>${kmlColor}</color>
+            <width>${style.weight}</width>
+        </LineStyle>
+    </Style>
+`;
+            }
+
+            // Add placemarks for each road
+            roadsData.forEach(road => {
+                const coordStr = road.coords.map(c => `${c[1]},${c[0]},0`).join(' ');
+                const escapedName = (road.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                kml += `    <Placemark>
+        <name>${escapedName}</name>
+        <description>
+            OSM ID: ${road.id}
+            Highway: ${road.highway}
+            Functional Class: ${road.funcClass} (${FC_STYLES[road.funcClass]?.name || ''})
+            Length: ${road.length.toFixed(3)} mi
+            ${road.ref ? 'Route: ' + road.ref : ''}
+        </description>
+        <styleUrl>#fc${road.funcClass}</styleUrl>
+        <LineString>
+            <coordinates>${coordStr}</coordinates>
+        </LineString>
+    </Placemark>
+`;
+            });
+
+            kml += `</Document>
+</kml>`;
+
+            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+            downloadBlob(blob, `${baseName}_vdot_roads.kml`);
+        }
+
+        function downloadBlob(blob, filename) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${name}_vdot_roads.geojson`;
+            a.download = filename;
             a.click();
             URL.revokeObjectURL(url);
         }
-        
-        document.addEventListener('DOMContentLoaded', initMap);
+
+        // =====================================================
+        // INDEXEDDB STORAGE
+        // =====================================================
+        const DB_NAME = 'CrashLensDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'savedSelections';
+        let db = null;
+
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    const database = event.target.result;
+                    if (!database.objectStoreNames.contains(STORE_NAME)) {
+                        const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('jurisdiction', 'jurisdiction', { unique: false });
+                        store.createIndex('name', 'name', { unique: false });
+                    }
+                };
+            });
+        }
+
+        async function saveSelection(name, jurisdiction, roadIds) {
+            if (!db) await initDB();
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+
+                const data = {
+                    name,
+                    jurisdiction,
+                    roadIds,
+                    timestamp: Date.now(),
+                    roadCount: roadIds.length
+                };
+
+                const request = store.add(data);
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function loadSavedSelections() {
+            if (!db) await initDB();
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function deleteSavedSelection(id) {
+            if (!db) await initDB();
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(id);
+
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getSavedSelection(id) {
+            if (!db) await initDB();
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // =====================================================
+        // SAVE/LOAD MODAL FUNCTIONS
+        // =====================================================
+        async function openSaveModal() {
+            document.getElementById('saveModal').classList.add('show');
+            document.getElementById('saveName').value = '';
+            await updateSavedList();
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').classList.remove('show');
+        }
+
+        async function updateSavedList() {
+            const listEl = document.getElementById('savedList');
+            try {
+                const saved = await loadSavedSelections();
+                if (saved.length === 0) {
+                    listEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.75rem; text-align: center;">No saved selections yet</p>';
+                    return;
+                }
+
+                listEl.innerHTML = saved.map(item => {
+                    const date = new Date(item.timestamp).toLocaleDateString();
+                    const jName = JURISDICTIONS[item.jurisdiction]?.name || item.jurisdiction;
+                    return `
+                        <div class="saved-item">
+                            <div class="saved-item-info">
+                                <div class="saved-item-name">${item.name}</div>
+                                <div class="saved-item-meta">${jName} · ${item.roadCount} roads · ${date}</div>
+                            </div>
+                            <div class="saved-item-actions">
+                                <button class="saved-item-btn" onclick="loadSavedSelection(${item.id})">Load</button>
+                                <button class="saved-item-btn delete" onclick="deleteSelection(${item.id})">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading saved selections:', error);
+                listEl.innerHTML = '<p style="color: var(--danger); font-size: 0.75rem;">Error loading saved selections</p>';
+            }
+        }
+
+        async function saveCurrentSelection() {
+            const name = document.getElementById('saveName').value.trim();
+            if (!name) {
+                alert('Please enter a name for this selection');
+                return;
+            }
+
+            if (!currentJurisdiction || !roadsData.length) {
+                alert('No road data to save. Please load a jurisdiction first.');
+                return;
+            }
+
+            try {
+                const roadIds = roadsData.map(r => r.id);
+                await saveSelection(name, currentJurisdiction, roadIds);
+                await updateSavedList();
+                document.getElementById('saveName').value = '';
+                alert('Selection saved successfully!');
+            } catch (error) {
+                console.error('Error saving selection:', error);
+                alert('Failed to save selection');
+            }
+        }
+
+        async function loadSavedSelection(id) {
+            try {
+                const saved = await getSavedSelection(id);
+                if (!saved) {
+                    alert('Selection not found');
+                    return;
+                }
+
+                // Switch to the saved jurisdiction
+                document.getElementById('jurisdictionSelect').value = saved.jurisdiction;
+                closeSaveModal();
+
+                // Load the jurisdiction data
+                await onJurisdictionChange();
+
+                // After loading, highlight the saved roads (they should already be loaded)
+                // The saved roadIds can be used to filter/highlight specific roads if needed
+                console.log(`Loaded selection "${saved.name}" with ${saved.roadIds.length} roads`);
+
+            } catch (error) {
+                console.error('Error loading selection:', error);
+                alert('Failed to load selection');
+            }
+        }
+
+        async function deleteSelection(id) {
+            if (!confirm('Are you sure you want to delete this saved selection?')) return;
+
+            try {
+                await deleteSavedSelection(id);
+                await updateSavedList();
+            } catch (error) {
+                console.error('Error deleting selection:', error);
+                alert('Failed to delete selection');
+            }
+        }
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initDB();
+            initMap();
+        });
     </script>
 </body>
 </html>
