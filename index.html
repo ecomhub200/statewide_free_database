@@ -947,63 +947,555 @@
             border-radius: 10px;
         }
 
-        /* Drawing Toolbar */
+        /* ========================================
+           REDESIGNED DRAWING TOOLBAR - Vertical Side Panel
+           Professional GIS-style interface
+           ======================================== */
         .drawing-toolbar {
             position: absolute;
-            top: 60px;
-            left: 50%;
-            transform: translateX(-50%);
+            top: 50%;
+            left: 12px;
+            transform: translateY(-50%);
             display: flex;
-            gap: 0.4rem;
-            align-items: center;
-            background: rgba(17, 24, 39, 0.95);
-            backdrop-filter: blur(12px);
-            padding: 0.4rem 0.75rem;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            flex-direction: column;
+            gap: 0.5rem;
+            background: rgba(17, 24, 39, 0.97);
+            backdrop-filter: blur(16px);
+            padding: 0.75rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
             z-index: 999;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .drawing-toolbar:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
         }
         .drawing-toolbar .toolbar-label {
-            font-size: 0.7rem;
-            font-weight: 600;
+            font-size: 0.6rem;
+            font-weight: 700;
             color: var(--text-muted);
-            margin-right: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-align: center;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0.25rem;
         }
         .drawing-toolbar .toolbar-divider {
-            width: 1px;
-            height: 24px;
-            background: var(--border-color);
-            margin: 0 0.25rem;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: 0.25rem 0;
         }
         .drawing-tool-btn {
-            padding: 0.4rem 0.65rem;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 0.75rem;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(31, 41, 55, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
             font-weight: 500;
             cursor: pointer;
             display: flex;
+            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            gap: 0.15rem;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .drawing-tool-btn .btn-label {
+            font-size: 0.55rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            opacity: 0.8;
+        }
+        .drawing-tool-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .drawing-tool-btn:hover {
+            transform: translateX(2px);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+        .drawing-tool-btn:hover::before {
+            opacity: 1;
+        }
+        .drawing-tool-btn > * {
+            position: relative;
+            z-index: 1;
+        }
+        .drawing-tool-btn.active {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 4px 16px rgba(59, 130, 246, 0.3);
+            transform: translateX(4px) scale(1.02);
+        }
+        .drawing-tool-btn.active::before {
+            opacity: 0;
+        }
+        .drawing-tool-btn.danger:hover {
+            border-color: var(--danger);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+        }
+        .drawing-tool-btn.danger:hover::before {
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+        }
+
+        /* Map Style Toggle in Toolbar */
+        .toolbar-map-toggle {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-tertiary);
+            padding: 3px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .toolbar-map-toggle .toggle-btn {
+            width: 36px;
+            height: 32px;
+            padding: 0;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .toolbar-map-toggle .toggle-btn:hover {
+            color: var(--text-primary);
+            background: rgba(59, 130, 246, 0.15);
+        }
+        .toolbar-map-toggle .toggle-btn.active {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        /* ========================================
+           DRAWING CONTEXT PANEL - Instructions & Status
+           ======================================== */
+        .drawing-context-panel {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(17, 24, 39, 0.97);
+            backdrop-filter: blur(16px);
+            padding: 0.75rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 999;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+            animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .drawing-context-panel.visible {
+            display: flex;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        .drawing-context-panel .context-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+        }
+        .drawing-context-panel .context-info {
+            flex: 1;
+        }
+        .drawing-context-panel .context-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.15rem;
+        }
+        .drawing-context-panel .context-instruction {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        .drawing-context-panel .context-stats {
+            display: flex;
+            gap: 1rem;
+            padding-left: 1rem;
+            border-left: 1px solid var(--border-color);
+        }
+        .drawing-context-panel .stat-item {
+            text-align: center;
+        }
+        .drawing-context-panel .stat-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .drawing-context-panel .stat-label {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .drawing-context-panel .context-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .drawing-context-panel .context-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .drawing-context-panel .context-btn.btn-cancel {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .drawing-context-panel .context-btn.btn-cancel:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
+        .drawing-context-panel .context-btn.btn-finish {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            border: 1px solid var(--success);
+            color: white;
+        }
+        .drawing-context-panel .context-btn.btn-finish:hover {
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            transform: translateY(-1px);
+        }
+        .drawing-context-panel .context-btn.btn-finish:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .kbd {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.15rem 0.35rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            margin-left: 0.25rem;
+        }
+
+        /* ========================================
+           SELECTION RESULTS PANEL
+           Shows roads within drawn shapes
+           ======================================== */
+        .selection-results-panel {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            width: 380px;
+            max-height: calc(100vh - 200px);
+            background: rgba(17, 24, 39, 0.97);
+            backdrop-filter: blur(16px);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            z-index: 998;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .selection-results-panel.visible {
+            display: flex;
+        }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .selection-results-panel .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        }
+        .selection-results-panel .panel-title-section {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .selection-results-panel .panel-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .selection-results-panel .panel-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .selection-results-panel .panel-subtitle {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .selection-results-panel .panel-close {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .selection-results-panel .panel-close:hover {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
+
+        /* Shape Info Section */
+        .selection-results-panel .shape-info {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 0.75rem;
+        }
+        .selection-results-panel .shape-stat {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+        }
+        .selection-results-panel .shape-stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .selection-results-panel .shape-stat-label {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 0.15rem;
+        }
+
+        /* Roads Summary */
+        .selection-results-panel .roads-summary {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .selection-results-panel .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .selection-results-panel .summary-title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .selection-results-panel .summary-count {
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            font-weight: 600;
+        }
+        .selection-results-panel .fc-breakdown {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.4rem;
+        }
+        .selection-results-panel .fc-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            font-size: 0.7rem;
+        }
+        .selection-results-panel .fc-item .fc-color {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+        .selection-results-panel .fc-item .fc-name {
+            flex: 1;
+            color: var(--text-secondary);
+        }
+        .selection-results-panel .fc-item .fc-count {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .selection-results-panel .fc-item .fc-miles {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+
+        /* Selected Roads List */
+        .selection-results-panel .roads-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.5rem;
+        }
+        .selection-results-panel .road-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 0.25rem;
+        }
+        .selection-results-panel .road-item:hover {
+            background: var(--bg-tertiary);
+        }
+        .selection-results-panel .road-item .road-fc-badge {
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: white;
+        }
+        .selection-results-panel .road-item .road-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .selection-results-panel .road-item .road-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .selection-results-panel .road-item .road-type {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+        .selection-results-panel .road-item .road-length {
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Panel Actions */
+        .selection-results-panel .panel-actions {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 0.5rem;
+        }
+        .selection-results-panel .panel-actions .action-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             gap: 0.3rem;
             transition: all 0.2s;
         }
-        .drawing-tool-btn:hover {
-            background: var(--accent-blue);
-            border-color: var(--accent-blue);
+        .selection-results-panel .action-btn.btn-export {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            border: none;
             color: white;
         }
-        .drawing-tool-btn.active {
-            background: var(--accent-blue);
-            border-color: var(--accent-blue);
-            color: white;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+        .selection-results-panel .action-btn.btn-export:hover {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transform: translateY(-1px);
         }
-        .drawing-tool-btn.danger:hover {
+        .selection-results-panel .action-btn.btn-clear {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        .selection-results-panel .action-btn.btn-clear:hover {
             background: var(--danger);
             border-color: var(--danger);
+            color: white;
+        }
+
+        /* Empty State */
+        .selection-results-panel .empty-state {
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        .selection-results-panel .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+        .selection-results-panel .empty-state-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         /* Measure Tooltip */
@@ -1416,28 +1908,108 @@
         <section class="map-section">
             <div id="map"></div>
 
-            <!-- Drawing Toolbar -->
+            <!-- Drawing Toolbar - Vertical Side Panel -->
             <div class="drawing-toolbar" id="drawingToolbar">
-                <span class="toolbar-label">Draw:</span>
-                <button class="drawing-tool-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Draw polygon - Click to add vertices, double-click to finish">
-                    <span>⬡</span> Polygon
+                <span class="toolbar-label">Draw</span>
+                <button class="drawing-tool-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Draw polygon (P) - Click to add vertices, double-click to finish">
+                    <span>⬡</span>
+                    <span class="btn-label">Area</span>
                 </button>
-                <button class="drawing-tool-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Draw circle - Click center, then click to set radius">
-                    <span>◯</span> Circle
+                <button class="drawing-tool-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Draw circle (C) - Click center, then click to set radius">
+                    <span>◯</span>
+                    <span class="btn-label">Radius</span>
                 </button>
-                <button class="drawing-tool-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure distance - Click points, double-click to finish">
-                    <span>📏</span> Measure
-                </button>
-                <button class="drawing-tool-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear all drawings">
-                    <span>✕</span> Clear
+                <button class="drawing-tool-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure distance (M) - Click points, double-click to finish">
+                    <span>📏</span>
+                    <span class="btn-label">Dist</span>
                 </button>
                 <div class="toolbar-divider"></div>
-                <div class="btn-toggle-group">
-                    <button class="btn-toggle active" onclick="switchMapStyle('street')" id="btnStreetView">
-                        <span>🗺️</span> Street
+                <button class="drawing-tool-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear all drawings (Delete)">
+                    <span>✕</span>
+                    <span class="btn-label">Clear</span>
+                </button>
+                <div class="toolbar-divider"></div>
+                <div class="toolbar-map-toggle">
+                    <button class="toggle-btn active" onclick="switchMapStyle('street')" id="btnStreetView" title="Street Map">
+                        🗺️
                     </button>
-                    <button class="btn-toggle" onclick="switchMapStyle('satellite')" id="btnSatelliteView">
-                        <span>🛰️</span> Satellite
+                    <button class="toggle-btn" onclick="switchMapStyle('satellite')" id="btnSatelliteView" title="Satellite View">
+                        🛰️
+                    </button>
+                </div>
+            </div>
+
+            <!-- Drawing Context Panel - Shows instructions during drawing -->
+            <div class="drawing-context-panel" id="drawingContextPanel">
+                <div class="context-icon" id="contextIcon">⬡</div>
+                <div class="context-info">
+                    <div class="context-title" id="contextTitle">Drawing Polygon</div>
+                    <div class="context-instruction" id="contextInstruction">Click to add vertices, double-click or press <kbd class="kbd">Enter</kbd> to finish</div>
+                </div>
+                <div class="context-stats" id="contextStats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="contextVertices">0</div>
+                        <div class="stat-label">Vertices</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="contextArea">0</div>
+                        <div class="stat-label">Sq Mi</div>
+                    </div>
+                </div>
+                <div class="context-actions">
+                    <button class="context-btn btn-cancel" onclick="cancelDrawing()" title="Cancel (Esc)">
+                        ✕ Cancel
+                    </button>
+                    <button class="context-btn btn-finish" id="btnFinishDrawing" onclick="finishCurrentDrawing()" title="Finish (Enter)">
+                        ✓ Finish
+                    </button>
+                </div>
+            </div>
+
+            <!-- Selection Results Panel - Shows roads in selection -->
+            <div class="selection-results-panel" id="selectionResultsPanel">
+                <div class="panel-header">
+                    <div class="panel-title-section">
+                        <div class="panel-icon" id="selectionPanelIcon">⬡</div>
+                        <div>
+                            <div class="panel-title">Selection Analysis</div>
+                            <div class="panel-subtitle" id="selectionPanelSubtitle">Polygon Selection</div>
+                        </div>
+                    </div>
+                    <button class="panel-close" onclick="closeSelectionPanel()" title="Close">✕</button>
+                </div>
+                <div class="shape-info" id="shapeInfoSection">
+                    <div class="shape-stat">
+                        <div class="shape-stat-value" id="shapeArea">0.00</div>
+                        <div class="shape-stat-label">Sq Miles</div>
+                    </div>
+                    <div class="shape-stat">
+                        <div class="shape-stat-value" id="shapePerimeter">0.00</div>
+                        <div class="shape-stat-label">Perimeter (mi)</div>
+                    </div>
+                    <div class="shape-stat">
+                        <div class="shape-stat-value" id="shapeCenter">--</div>
+                        <div class="shape-stat-label">Center</div>
+                    </div>
+                </div>
+                <div class="roads-summary" id="roadsSummarySection">
+                    <div class="summary-header">
+                        <div class="summary-title">Roads in Selection</div>
+                        <div class="summary-count" id="selectionRoadsCount">0 segments · 0.0 mi</div>
+                    </div>
+                    <div class="fc-breakdown" id="fcBreakdown">
+                        <!-- FC breakdown items will be dynamically populated -->
+                    </div>
+                </div>
+                <div class="roads-list" id="selectionRoadsList">
+                    <!-- Road items will be dynamically populated -->
+                </div>
+                <div class="panel-actions">
+                    <button class="action-btn btn-export" onclick="exportSelectionData()">
+                        📥 Export Selection
+                    </button>
+                    <button class="action-btn btn-clear" onclick="clearSelectionAndPanel()">
+                        ✕ Clear
                     </button>
                 </div>
             </div>
@@ -3158,17 +3730,91 @@
         }
 
         // =====================================================
-        // DRAWING TOOLS - STATE AND FUNCTIONS
+        // DRAWING TOOLS - STATE AND FUNCTIONS (Enhanced)
         // =====================================================
         let currentDrawingMode = null;
         let drawnItems = null;
         let drawingPoints = [];
         let currentDrawLayer = null;
         let measureTooltip = null;
+        let currentSelection = null; // Stores the current selection shape and data
+        let selectedRoads = []; // Roads within the current selection
+
+        // FC Colors for reference
+        const FC_COLORS = {
+            '1': '#0070ff',
+            '2': '#ff5500',
+            '3': '#ff2600',
+            '4': '#e6e600',
+            '5': '#559100',
+            '6': '#ff7700',
+            '7': '#a4c400'
+        };
+
+        const FC_NAMES = {
+            '1': 'Interstate',
+            '2': 'Freeway/Expy',
+            '3': 'Principal Art.',
+            '4': 'Minor Arterial',
+            '5': 'Major Coll.',
+            '6': 'Minor Coll.',
+            '7': 'Local'
+        };
 
         function initDrawingTools() {
             // Initialize feature group for drawn items
             drawnItems = L.featureGroup().addTo(map);
+
+            // Initialize keyboard shortcuts
+            document.addEventListener('keydown', handleDrawingKeyboard);
+        }
+
+        // Keyboard shortcuts handler
+        function handleDrawingKeyboard(e) {
+            // Don't trigger if user is typing in an input
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            switch (e.key.toLowerCase()) {
+                case 'p':
+                    if (!currentDrawingMode) startDrawing('polygon');
+                    break;
+                case 'c':
+                    if (!currentDrawingMode) startDrawing('circle');
+                    break;
+                case 'm':
+                    if (!currentDrawingMode) startDrawing('measure');
+                    break;
+                case 'escape':
+                    if (currentDrawingMode) cancelDrawing();
+                    break;
+                case 'enter':
+                    if (currentDrawingMode) finishCurrentDrawing();
+                    break;
+                case 'delete':
+                case 'backspace':
+                    if (!currentDrawingMode && e.shiftKey) clearAllDrawings();
+                    break;
+            }
+        }
+
+        // Finish drawing based on current mode
+        function finishCurrentDrawing() {
+            if (!currentDrawingMode) return;
+
+            if (currentDrawingMode === 'polygon') {
+                finishPolygon();
+            } else if (currentDrawingMode === 'circle' && drawingPoints.length > 0) {
+                // For circle, we need the current mouse position - use last known
+                if (currentDrawLayer) {
+                    const radius = currentDrawLayer.getRadius();
+                    if (radius > 100) {
+                        const center = drawingPoints[0];
+                        finishCircleWithRadius(center, radius);
+                    }
+                }
+            } else if (currentDrawingMode === 'measure') {
+                finishMeasure();
+            }
         }
 
         function startDrawing(mode) {
@@ -3188,6 +3834,9 @@
             // Set cursor style
             document.getElementById('map').style.cursor = 'crosshair';
 
+            // Show context panel with appropriate content
+            showContextPanel(mode);
+
             // Add click handler based on mode
             if (mode === 'polygon') {
                 map.on('click', onPolygonClick);
@@ -3198,6 +3847,127 @@
                 map.on('click', onMeasureClick);
                 map.on('dblclick', finishMeasure);
             }
+        }
+
+        // Show context panel during drawing
+        function showContextPanel(mode) {
+            const panel = document.getElementById('drawingContextPanel');
+            const icon = document.getElementById('contextIcon');
+            const title = document.getElementById('contextTitle');
+            const instruction = document.getElementById('contextInstruction');
+            const stats = document.getElementById('contextStats');
+            const finishBtn = document.getElementById('btnFinishDrawing');
+
+            const configs = {
+                polygon: {
+                    icon: '⬡',
+                    title: 'Drawing Polygon',
+                    instruction: 'Click to add vertices, double-click or press <kbd class="kbd">Enter</kbd> to finish',
+                    statsHtml: `
+                        <div class="stat-item">
+                            <div class="stat-value" id="contextVertices">0</div>
+                            <div class="stat-label">Vertices</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="contextArea">0</div>
+                            <div class="stat-label">Sq Mi</div>
+                        </div>
+                    `,
+                    minForFinish: 3
+                },
+                circle: {
+                    icon: '◯',
+                    title: 'Drawing Circle',
+                    instruction: 'Click to set center, then drag and click to set radius',
+                    statsHtml: `
+                        <div class="stat-item">
+                            <div class="stat-value" id="contextRadius">0</div>
+                            <div class="stat-label">Radius (mi)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="contextArea">0</div>
+                            <div class="stat-label">Sq Mi</div>
+                        </div>
+                    `,
+                    minForFinish: 1
+                },
+                measure: {
+                    icon: '📏',
+                    title: 'Measuring Distance',
+                    instruction: 'Click to add points, double-click or press <kbd class="kbd">Enter</kbd> to finish',
+                    statsHtml: `
+                        <div class="stat-item">
+                            <div class="stat-value" id="contextPoints">0</div>
+                            <div class="stat-label">Points</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="contextDistance">0</div>
+                            <div class="stat-label">Miles</div>
+                        </div>
+                    `,
+                    minForFinish: 2
+                }
+            };
+
+            const config = configs[mode];
+            icon.textContent = config.icon;
+            title.textContent = config.title;
+            instruction.innerHTML = config.instruction;
+            stats.innerHTML = config.statsHtml;
+            finishBtn.disabled = true;
+
+            panel.classList.add('visible');
+        }
+
+        // Update context panel stats during drawing
+        function updateContextStats() {
+            if (!currentDrawingMode) return;
+
+            if (currentDrawingMode === 'polygon') {
+                const verticesEl = document.getElementById('contextVertices');
+                const areaEl = document.getElementById('contextArea');
+                const finishBtn = document.getElementById('btnFinishDrawing');
+
+                if (verticesEl) verticesEl.textContent = drawingPoints.length;
+                if (areaEl && drawingPoints.length >= 3) {
+                    const area = calculatePolygonArea(drawingPoints);
+                    areaEl.textContent = area.toFixed(2);
+                }
+                if (finishBtn) finishBtn.disabled = drawingPoints.length < 3;
+
+            } else if (currentDrawingMode === 'circle') {
+                const radiusEl = document.getElementById('contextRadius');
+                const areaEl = document.getElementById('contextArea');
+                const finishBtn = document.getElementById('btnFinishDrawing');
+
+                if (currentDrawLayer && drawingPoints.length > 0) {
+                    const radius = currentDrawLayer.getRadius();
+                    const radiusMi = radius / 1609.34;
+                    const areaSqMi = (Math.PI * Math.pow(radius, 2)) / 2589988.11;
+
+                    if (radiusEl) radiusEl.textContent = radiusMi.toFixed(2);
+                    if (areaEl) areaEl.textContent = areaSqMi.toFixed(2);
+                    if (finishBtn) finishBtn.disabled = radius < 100;
+                }
+
+            } else if (currentDrawingMode === 'measure') {
+                const pointsEl = document.getElementById('contextPoints');
+                const distanceEl = document.getElementById('contextDistance');
+                const finishBtn = document.getElementById('btnFinishDrawing');
+
+                if (pointsEl) pointsEl.textContent = drawingPoints.length;
+                if (distanceEl && drawingPoints.length >= 2) {
+                    const dist = calculateTotalDistance(drawingPoints) / 1609.34;
+                    distanceEl.textContent = dist.toFixed(2);
+                }
+                if (finishBtn) finishBtn.disabled = drawingPoints.length < 2;
+            }
+        }
+
+        // Hide context panel
+        function hideContextPanel() {
+            const panel = document.getElementById('drawingContextPanel');
+            panel.classList.remove('visible');
         }
 
         function cancelDrawing() {
@@ -3223,6 +3993,9 @@
 
             // Clear button active states
             document.querySelectorAll('.drawing-tool-btn').forEach(btn => btn.classList.remove('active'));
+
+            // Hide context panel
+            hideContextPanel();
         }
 
         function onPolygonClick(e) {
@@ -3241,18 +4014,29 @@
                 }).addTo(map);
             } else {
                 currentDrawLayer = L.circleMarker(e.latlng, {
-                    radius: 5,
+                    radius: 6,
                     color: '#3b82f6',
                     fillColor: '#3b82f6',
-                    fillOpacity: 1
+                    fillOpacity: 1,
+                    weight: 2
                 }).addTo(map);
             }
+
+            // Add vertex markers for visual feedback
+            L.circleMarker(e.latlng, {
+                radius: 4,
+                color: '#fff',
+                fillColor: '#3b82f6',
+                fillOpacity: 1,
+                weight: 2
+            }).addTo(currentDrawLayer ? map : drawnItems);
+
+            updateContextStats();
         }
 
         function finishPolygon(e) {
             if (drawingPoints.length < 3) {
-                alert('Please add at least 3 points to create a polygon');
-                return;
+                return; // Silently return, don't alert
             }
 
             // Remove temporary layer
@@ -3260,17 +4044,41 @@
                 map.removeLayer(currentDrawLayer);
             }
 
+            // Remove temporary vertex markers
+            map.eachLayer(layer => {
+                if (layer instanceof L.CircleMarker && !drawnItems.hasLayer(layer)) {
+                    // Keep only drawn items
+                }
+            });
+
             // Create final polygon
             const polygon = L.polygon(drawingPoints, {
                 color: '#3b82f6',
                 fillColor: '#3b82f6',
-                fillOpacity: 0.2,
+                fillOpacity: 0.15,
                 weight: 2
             }).addTo(drawnItems);
 
-            // Calculate area
+            // Calculate area and perimeter
             const area = calculatePolygonArea(drawingPoints);
-            polygon.bindPopup(`<strong>Polygon</strong><br>Area: ${area.toFixed(2)} sq mi`);
+            const perimeter = calculatePolygonPerimeter(drawingPoints);
+            const center = polygon.getBounds().getCenter();
+
+            // Store selection data
+            currentSelection = {
+                type: 'polygon',
+                layer: polygon,
+                points: [...drawingPoints],
+                area: area,
+                perimeter: perimeter,
+                center: center
+            };
+
+            // Analyze roads in selection
+            analyzeRoadsInSelection(currentSelection);
+
+            // Show popup
+            polygon.bindPopup(`<strong>Polygon Selection</strong><br>Area: ${area.toFixed(2)} sq mi<br>Click selection panel for details`).openPopup();
 
             cancelDrawing();
         }
@@ -3283,12 +4091,28 @@
                     radius: 100,
                     color: '#3b82f6',
                     fillColor: '#3b82f6',
-                    fillOpacity: 0.2,
-                    dashArray: '5, 10'
+                    fillOpacity: 0.15,
+                    dashArray: '5, 10',
+                    weight: 2
+                }).addTo(map);
+
+                // Add center marker
+                L.circleMarker(e.latlng, {
+                    radius: 5,
+                    color: '#fff',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 1,
+                    weight: 2
                 }).addTo(map);
 
                 // Add mousemove to adjust radius
                 map.on('mousemove', onCircleDrag);
+
+                // Update instruction
+                document.getElementById('contextInstruction').innerHTML =
+                    'Move mouse to adjust radius, click to finish or press <kbd class="kbd">Enter</kbd>';
+
+                updateContextStats();
             } else {
                 // Second click - finish circle
                 finishCircle(e);
@@ -3300,6 +4124,7 @@
                 const center = drawingPoints[0];
                 const radius = center.distanceTo(e.latlng);
                 currentDrawLayer.setRadius(radius);
+                updateContextStats();
             }
         }
 
@@ -3309,23 +4134,54 @@
             const center = drawingPoints[0];
             const radius = center.distanceTo(e.latlng);
 
+            finishCircleWithRadius(center, radius);
+        }
+
+        function finishCircleWithRadius(center, radius) {
             // Remove temporary layer
-            map.removeLayer(currentDrawLayer);
+            if (currentDrawLayer) {
+                map.removeLayer(currentDrawLayer);
+            }
             map.off('mousemove', onCircleDrag);
+
+            // Remove temporary center marker
+            map.eachLayer(layer => {
+                if (layer instanceof L.CircleMarker && !drawnItems.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
 
             // Create final circle
             const circle = L.circle(center, {
                 radius: radius,
                 color: '#3b82f6',
                 fillColor: '#3b82f6',
-                fillOpacity: 0.2,
+                fillOpacity: 0.15,
                 weight: 2
             }).addTo(drawnItems);
 
             // Calculate area
             const areaSqM = Math.PI * Math.pow(radius, 2);
-            const areaSqMi = areaSqM / 2589988.11; // Convert to square miles
-            circle.bindPopup(`<strong>Circle</strong><br>Radius: ${(radius / 1609.34).toFixed(2)} mi<br>Area: ${areaSqMi.toFixed(2)} sq mi`);
+            const areaSqMi = areaSqM / 2589988.11;
+            const radiusMi = radius / 1609.34;
+            const circumference = (2 * Math.PI * radius) / 1609.34;
+
+            // Store selection data
+            currentSelection = {
+                type: 'circle',
+                layer: circle,
+                center: center,
+                radius: radius,
+                radiusMi: radiusMi,
+                area: areaSqMi,
+                perimeter: circumference
+            };
+
+            // Analyze roads in selection
+            analyzeRoadsInSelection(currentSelection);
+
+            // Show popup
+            circle.bindPopup(`<strong>Circle Selection</strong><br>Radius: ${radiusMi.toFixed(2)} mi<br>Area: ${areaSqMi.toFixed(2)} sq mi`).openPopup();
 
             cancelDrawing();
         }
@@ -3337,6 +4193,15 @@
             if (currentDrawLayer) {
                 map.removeLayer(currentDrawLayer);
             }
+
+            // Add point marker
+            L.circleMarker(e.latlng, {
+                radius: 4,
+                color: '#fff',
+                fillColor: '#f59e0b',
+                fillOpacity: 1,
+                weight: 2
+            }).addTo(map);
 
             if (drawingPoints.length > 1) {
                 currentDrawLayer = L.polyline(drawingPoints, {
@@ -3359,11 +4224,12 @@
                 .setContent(`${(totalDistance / 1609.34).toFixed(2)} mi`)
                 .addTo(map);
             }
+
+            updateContextStats();
         }
 
         function finishMeasure(e) {
             if (drawingPoints.length < 2) {
-                alert('Please add at least 2 points to measure');
                 return;
             }
 
@@ -3382,6 +4248,13 @@
                 measureTooltip = null;
             }
 
+            // Remove temporary markers
+            map.eachLayer(layer => {
+                if (layer instanceof L.CircleMarker && !drawnItems.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+
             cancelDrawing();
         }
 
@@ -3394,8 +4267,6 @@
         }
 
         function calculatePolygonArea(points) {
-            // Simple approximation using Shoelace formula
-            // Returns area in square miles
             if (points.length < 3) return 0;
 
             let area = 0;
@@ -3403,7 +4274,6 @@
 
             for (let i = 0; i < n; i++) {
                 const j = (i + 1) % n;
-                // Convert to approximate meters
                 const xi = points[i].lng * 111320 * Math.cos(points[i].lat * Math.PI / 180);
                 const yi = points[i].lat * 110540;
                 const xj = points[j].lng * 111320 * Math.cos(points[j].lat * Math.PI / 180);
@@ -3414,8 +4284,239 @@
             }
 
             area = Math.abs(area) / 2;
-            // Convert square meters to square miles
             return area / 2589988.11;
+        }
+
+        function calculatePolygonPerimeter(points) {
+            let perimeter = 0;
+            for (let i = 0; i < points.length; i++) {
+                const j = (i + 1) % points.length;
+                perimeter += points[i].distanceTo(points[j]);
+            }
+            return perimeter / 1609.34; // Convert to miles
+        }
+
+        // =====================================================
+        // ROADS-IN-SELECTION ANALYSIS
+        // =====================================================
+        function analyzeRoadsInSelection(selection) {
+            if (!roadsData || roadsData.length === 0) {
+                showSelectionPanel(selection, []);
+                return;
+            }
+
+            selectedRoads = [];
+
+            if (selection.type === 'polygon') {
+                // Check each road to see if it intersects the polygon
+                roadsData.forEach(road => {
+                    if (road.coords && roadIntersectsPolygon(road.coords, selection.points)) {
+                        selectedRoads.push(road);
+                    }
+                });
+            } else if (selection.type === 'circle') {
+                // Check each road to see if it's within the circle
+                roadsData.forEach(road => {
+                    if (road.coords && roadIntersectsCircle(road.coords, selection.center, selection.radius)) {
+                        selectedRoads.push(road);
+                    }
+                });
+            }
+
+            showSelectionPanel(selection, selectedRoads);
+        }
+
+        // Check if a road intersects a polygon
+        function roadIntersectsPolygon(roadCoords, polygonPoints) {
+            // Check if any point of the road is inside the polygon
+            for (const coord of roadCoords) {
+                if (pointInPolygon(coord, polygonPoints)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Check if a road intersects a circle
+        function roadIntersectsCircle(roadCoords, center, radius) {
+            for (const coord of roadCoords) {
+                const point = L.latLng(coord[0], coord[1]);
+                if (center.distanceTo(point) <= radius) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Ray-casting algorithm to check if point is in polygon
+        function pointInPolygon(point, polygon) {
+            const x = point[1]; // lng
+            const y = point[0]; // lat
+            let inside = false;
+
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].lng, yi = polygon[i].lat;
+                const xj = polygon[j].lng, yj = polygon[j].lat;
+
+                if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+
+            return inside;
+        }
+
+        // =====================================================
+        // SELECTION RESULTS PANEL
+        // =====================================================
+        function showSelectionPanel(selection, roads) {
+            const panel = document.getElementById('selectionResultsPanel');
+            const icon = document.getElementById('selectionPanelIcon');
+            const subtitle = document.getElementById('selectionPanelSubtitle');
+
+            // Update icon and subtitle based on selection type
+            if (selection.type === 'polygon') {
+                icon.textContent = '⬡';
+                subtitle.textContent = 'Polygon Selection';
+            } else if (selection.type === 'circle') {
+                icon.textContent = '◯';
+                subtitle.textContent = 'Circle Selection';
+            }
+
+            // Update shape stats
+            document.getElementById('shapeArea').textContent = selection.area.toFixed(2);
+            document.getElementById('shapePerimeter').textContent = selection.perimeter.toFixed(2);
+
+            const center = selection.type === 'circle' ? selection.center :
+                L.latLng(
+                    selection.points.reduce((s, p) => s + p.lat, 0) / selection.points.length,
+                    selection.points.reduce((s, p) => s + p.lng, 0) / selection.points.length
+                );
+            document.getElementById('shapeCenter').textContent =
+                `${center.lat.toFixed(3)}, ${center.lng.toFixed(3)}`;
+
+            // Update roads summary
+            const totalMiles = roads.reduce((s, r) => s + (r.length || 0), 0);
+            document.getElementById('selectionRoadsCount').textContent =
+                `${roads.length.toLocaleString()} segments · ${totalMiles.toFixed(1)} mi`;
+
+            // Update FC breakdown
+            const fcBreakdown = document.getElementById('fcBreakdown');
+            const fcCounts = {};
+            const fcMiles = {};
+
+            for (let fc = 1; fc <= 7; fc++) {
+                fcCounts[fc] = 0;
+                fcMiles[fc] = 0;
+            }
+
+            roads.forEach(road => {
+                const fc = road.funcClass || '7';
+                fcCounts[fc] = (fcCounts[fc] || 0) + 1;
+                fcMiles[fc] = (fcMiles[fc] || 0) + (road.length || 0);
+            });
+
+            fcBreakdown.innerHTML = Object.keys(FC_NAMES).map(fc => `
+                <div class="fc-item">
+                    <div class="fc-color" style="background: ${FC_COLORS[fc]}"></div>
+                    <div class="fc-name">${FC_NAMES[fc]}</div>
+                    <div class="fc-count">${fcCounts[fc] || 0}</div>
+                    <div class="fc-miles">${(fcMiles[fc] || 0).toFixed(1)} mi</div>
+                </div>
+            `).join('');
+
+            // Update roads list
+            const roadsList = document.getElementById('selectionRoadsList');
+            if (roads.length === 0) {
+                roadsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🛣️</div>
+                        <div class="empty-state-text">No roads found in this selection.<br>Load road data or draw a larger area.</div>
+                    </div>
+                `;
+            } else {
+                // Sort by functional class, then by name
+                const sortedRoads = [...roads].sort((a, b) => {
+                    const fcDiff = (parseInt(a.funcClass) || 7) - (parseInt(b.funcClass) || 7);
+                    if (fcDiff !== 0) return fcDiff;
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+
+                // Limit display to first 100 for performance
+                const displayRoads = sortedRoads.slice(0, 100);
+
+                roadsList.innerHTML = displayRoads.map(road => `
+                    <div class="road-item" onclick="focusOnRoad('${road.id}')">
+                        <div class="road-fc-badge" style="background: ${FC_COLORS[road.funcClass] || FC_COLORS['7']}">
+                            ${road.funcClass || '7'}
+                        </div>
+                        <div class="road-info">
+                            <div class="road-name">${road.name || 'Unnamed Road'}</div>
+                            <div class="road-type">${road.highway || 'road'}</div>
+                        </div>
+                        <div class="road-length">${(road.length || 0).toFixed(2)} mi</div>
+                    </div>
+                `).join('');
+
+                if (sortedRoads.length > 100) {
+                    roadsList.innerHTML += `
+                        <div style="text-align: center; padding: 0.5rem; color: var(--text-muted); font-size: 0.7rem;">
+                            Showing 100 of ${sortedRoads.length} roads
+                        </div>
+                    `;
+                }
+            }
+
+            panel.classList.add('visible');
+        }
+
+        function closeSelectionPanel() {
+            document.getElementById('selectionResultsPanel').classList.remove('visible');
+        }
+
+        function clearSelectionAndPanel() {
+            if (drawnItems) {
+                drawnItems.clearLayers();
+            }
+            currentSelection = null;
+            selectedRoads = [];
+            closeSelectionPanel();
+        }
+
+        function focusOnRoad(roadId) {
+            // Find the road and zoom to it
+            const road = roadsData.find(r => r.id === roadId);
+            if (road && road.coords && road.coords.length > 0) {
+                const bounds = L.latLngBounds(road.coords.map(c => [c[0], c[1]]));
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+
+                // Highlight the road
+                selectRoad(road);
+            }
+        }
+
+        function exportSelectionData() {
+            if (!selectedRoads || selectedRoads.length === 0) {
+                alert('No roads to export');
+                return;
+            }
+
+            // Create CSV content
+            let csv = 'Name,Functional Class,Highway Type,Length (mi),OSM ID\n';
+            selectedRoads.forEach(road => {
+                csv += `"${(road.name || 'Unnamed').replace(/"/g, '""')}",${road.funcClass || ''},${road.highway || ''},${(road.length || 0).toFixed(3)},${road.id || ''}\n`;
+            });
+
+            // Download
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `selection_roads_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function clearAllDrawings() {
@@ -3423,6 +4524,9 @@
                 drawnItems.clearLayers();
             }
             cancelDrawing();
+            currentSelection = null;
+            selectedRoads = [];
+            closeSelectionPanel();
         }
 
         // =====================================================
