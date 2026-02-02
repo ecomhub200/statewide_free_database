@@ -950,19 +950,25 @@
         /* Drawing Toolbar */
         .drawing-toolbar {
             position: absolute;
-            top: 10px;
+            top: 60px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 0.5rem;
+            gap: 0.4rem;
             align-items: center;
             background: rgba(17, 24, 39, 0.95);
             backdrop-filter: blur(12px);
-            padding: 0.5rem 0.75rem;
-            border-radius: 10px;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
             border: 1px solid var(--border-color);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
+            z-index: 999;
+        }
+        .drawing-toolbar .toolbar-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-right: 0.25rem;
         }
         .drawing-toolbar .toolbar-divider {
             width: 1px;
@@ -1412,21 +1418,18 @@
 
             <!-- Drawing Toolbar -->
             <div class="drawing-toolbar" id="drawingToolbar">
-                <button class="drawing-tool-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Polygon - Click to add vertices, double-click to finish">
+                <span class="toolbar-label">Draw:</span>
+                <button class="drawing-tool-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Draw polygon - Click to add vertices, double-click to finish">
                     <span>⬡</span> Polygon
                 </button>
-                <button class="drawing-tool-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Circle - Click center, drag to set radius">
+                <button class="drawing-tool-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Draw circle - Click center, then click to set radius">
                     <span>◯</span> Circle
                 </button>
-                <button class="drawing-tool-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure - Draw a line to measure distance">
+                <button class="drawing-tool-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure distance - Click points, double-click to finish">
                     <span>📏</span> Measure
                 </button>
-                <div class="toolbar-divider"></div>
                 <button class="drawing-tool-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear all drawings">
                     <span>✕</span> Clear
-                </button>
-                <button class="drawing-tool-btn" id="btnExportKML" onclick="exportDrawingsToKML()" title="Export drawings to KML">
-                    <span>🌍</span> Export KML
                 </button>
                 <div class="toolbar-divider"></div>
                 <div class="btn-toggle-group">
@@ -1436,190 +1439,6 @@
                     <button class="btn-toggle" onclick="switchMapStyle('satellite')" id="btnSatelliteView">
                         <span>🛰️</span> Satellite
                     </button>
-                </div>
-            </div>
-
-            <!-- Select Location Panel (Left) -->
-            <div class="floating-panel map-selection-panel" id="mapSelectionPanel">
-                <div class="floating-panel-header" onclick="togglePanel('mapSelectionPanel')">
-                    <div class="floating-panel-title">
-                        <span class="icon">📍</span>
-                        <span>Select Location</span>
-                    </div>
-                    <div class="floating-panel-toggle">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="floating-panel-body">
-                    <input type="text" class="search-input" placeholder="Filter locations..." id="locationFilterInput" oninput="filterLocationList()">
-                    <div class="location-list" id="locationList">
-                        <!-- Location items will be dynamically added -->
-                        <div class="location-item" onclick="selectLocation('loc1')">
-                            <input type="checkbox" id="loc1" onchange="onLocationSelect(this)">
-                            <span class="location-name">Sample Location 1</span>
-                            <span class="location-id">ID: 12345</span>
-                        </div>
-                        <div class="location-item" onclick="selectLocation('loc2')">
-                            <input type="checkbox" id="loc2" onchange="onLocationSelect(this)">
-                            <span class="location-name">Sample Location 2</span>
-                            <span class="location-id">ID: 12346</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stats Panel (Right) -->
-            <div class="floating-panel map-stats-panel" id="mapStatsPanel">
-                <div class="floating-panel-header" onclick="togglePanel('mapStatsPanel')">
-                    <div class="floating-panel-title">
-                        <span class="icon">📊</span>
-                        <span>Stats</span>
-                    </div>
-                    <div class="floating-panel-toggle">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="floating-panel-body">
-                    <div class="location-header">
-                        <div class="location-id-display" id="statsLocationId">Select a location</div>
-                    </div>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-value" id="statTotal">0</div>
-                            <div class="stat-label">Total</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value fatal" id="statFatal">0</div>
-                            <div class="stat-label">Fatal</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value warning" id="statKA">0</div>
-                            <div class="stat-label">K+A</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="statEPDO">0</div>
-                            <div class="stat-label">EPDO</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value success" id="statPed">0</div>
-                            <div class="stat-label">Ped</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value success" id="statBike">0</div>
-                            <div class="stat-label">Bike</div>
-                        </div>
-                    </div>
-                    <div class="action-buttons">
-                        <button class="btn-soft btn-soft-warning btn-soft-sm" onclick="openCMF()">💡 CMF</button>
-                        <button class="btn-soft btn-soft-info btn-soft-sm" onclick="openMUTCD()">📘 MUTCD</button>
-                        <button class="btn-soft btn-soft-purple btn-soft-sm" onclick="openWarrants()">📋 Warrants</button>
-                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="openGrants()">💰 Grants</button>
-                        <button class="btn-soft btn-soft-info btn-soft-sm" onclick="openBAStudy()">📈 B/A Study</button>
-                        <button class="btn-soft btn-soft-primary btn-soft-sm" onclick="analyzeLocation()">🔍 Analyze</button>
-                        <button class="btn-soft btn-soft-sm" onclick="analyzeAssets()">🏗️ Analyze Assets</button>
-                        <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="generatePDFReport()">📄 PDF Report</button>
-                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportStatsData()">📥 Export</button>
-                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportStatsKML()">🌍 KML</button>
-                    </div>
-                    <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="clearStatsSelection()" style="width: 100%; margin-top: 0.5rem; justify-content: center;">
-                        ✕ Clear
-                    </button>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="showRouteLabels" onchange="toggleRouteLabels()">
-                        <label for="showRouteLabels">Show route labels</label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Asset Layers Panel (Bottom-Left) -->
-            <div class="floating-panel asset-layers-panel" id="assetLayersPanel">
-                <div class="floating-panel-header" onclick="togglePanel('assetLayersPanel')">
-                    <div class="floating-panel-title">
-                        <span class="icon">🗂️</span>
-                        <span>Asset Layers</span>
-                    </div>
-                    <div class="floating-panel-toggle">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="floating-panel-body">
-                    <div class="layer-controls">
-                        <button class="btn-soft btn-soft-primary btn-soft-sm" onclick="showAllLayers()">
-                            <span>👁️</span> Show All
-                        </button>
-                        <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="hideAllLayers()">
-                            <span>🚫</span> Hide All
-                        </button>
-                    </div>
-                    <div class="layer-list" id="layerList">
-                        <div class="layer-item">
-                            <input type="checkbox" id="layerRoads" checked onchange="toggleLayer('roads')">
-                            <span class="layer-icon">🛣️</span>
-                            <label for="layerRoads">Roads</label>
-                            <span class="layer-count" id="layerRoadsCount">0</span>
-                        </div>
-                        <div class="layer-item">
-                            <input type="checkbox" id="layerIntersections" onchange="toggleLayer('intersections')">
-                            <span class="layer-icon">✚</span>
-                            <label for="layerIntersections">Intersections</label>
-                            <span class="layer-count" id="layerIntersectionsCount">0</span>
-                        </div>
-                        <div class="layer-item">
-                            <input type="checkbox" id="layerSignals" onchange="toggleLayer('signals')">
-                            <span class="layer-icon">🚦</span>
-                            <label for="layerSignals">Traffic Signals</label>
-                            <span class="layer-count" id="layerSignalsCount">0</span>
-                        </div>
-                        <div class="layer-item">
-                            <input type="checkbox" id="layerSigns" onchange="toggleLayer('signs')">
-                            <span class="layer-icon">🛑</span>
-                            <label for="layerSigns">Signs</label>
-                            <span class="layer-count" id="layerSignsCount">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Drawing Selection Panel (shown after drawing) -->
-            <div class="floating-panel drawing-selection-panel" id="drawingSelectionPanel">
-                <div class="floating-panel-header" onclick="togglePanel('drawingSelectionPanel')">
-                    <div class="floating-panel-title">
-                        <span class="icon">✏️</span>
-                        <span>Drawing Selection</span>
-                    </div>
-                    <div class="floating-panel-toggle">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                    </div>
-                </div>
-                <div class="floating-panel-body">
-                    <div class="drawing-stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-value" id="drawingTotal">0</div>
-                            <div class="stat-label">Total</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value fatal" id="drawingFatal">0</div>
-                            <div class="stat-label">Fatal</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-value" id="drawingArea">0</div>
-                            <div class="stat-label">Area (sq mi)</div>
-                        </div>
-                    </div>
-                    <div class="action-buttons">
-                        <button class="btn-soft btn-soft-primary btn-soft-sm" onclick="analyzeDrawingSelection()">🔍 Analyze</button>
-                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportDrawingSelection()">📥 Export</button>
-                        <button class="btn-soft btn-soft-success btn-soft-sm" onclick="exportDrawingKML()">🌍 KML</button>
-                        <button class="btn-soft btn-soft-danger btn-soft-sm" onclick="clearDrawingSelection()">✕ Clear</button>
-                    </div>
                 </div>
             </div>
 
@@ -3185,9 +3004,6 @@
             const area = calculatePolygonArea(drawingPoints);
             polygon.bindPopup(`<strong>Polygon</strong><br>Area: ${area.toFixed(2)} sq mi`);
 
-            // Show drawing selection panel
-            showDrawingSelectionPanel(polygon, 'polygon');
-
             cancelDrawing();
         }
 
@@ -3242,9 +3058,6 @@
             const areaSqM = Math.PI * Math.pow(radius, 2);
             const areaSqMi = areaSqM / 2589988.11; // Convert to square miles
             circle.bindPopup(`<strong>Circle</strong><br>Radius: ${(radius / 1609.34).toFixed(2)} mi<br>Area: ${areaSqMi.toFixed(2)} sq mi`);
-
-            // Show drawing selection panel
-            showDrawingSelectionPanel(circle, 'circle');
 
             cancelDrawing();
         }
@@ -3342,93 +3155,6 @@
                 drawnItems.clearLayers();
             }
             cancelDrawing();
-            hideDrawingSelectionPanel();
-        }
-
-        function showDrawingSelectionPanel(layer, type) {
-            const panel = document.getElementById('drawingSelectionPanel');
-            panel.classList.add('visible');
-
-            // Update stats (placeholder values - would be calculated from actual data)
-            document.getElementById('drawingTotal').textContent = '0';
-            document.getElementById('drawingFatal').textContent = '0';
-
-            if (type === 'polygon') {
-                const area = calculatePolygonArea(layer.getLatLngs()[0]);
-                document.getElementById('drawingArea').textContent = area.toFixed(2);
-            } else if (type === 'circle') {
-                const radius = layer.getRadius();
-                const areaSqM = Math.PI * Math.pow(radius, 2);
-                const areaSqMi = areaSqM / 2589988.11;
-                document.getElementById('drawingArea').textContent = areaSqMi.toFixed(2);
-            }
-        }
-
-        function hideDrawingSelectionPanel() {
-            const panel = document.getElementById('drawingSelectionPanel');
-            panel.classList.remove('visible');
-        }
-
-        function exportDrawingsToKML() {
-            if (!drawnItems || drawnItems.getLayers().length === 0) {
-                alert('No drawings to export. Please draw a polygon, circle, or measurement first.');
-                return;
-            }
-
-            let kml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-            kml += '<kml xmlns="http://www.opengis.net/kml/2.2">\n';
-            kml += '<Document>\n';
-            kml += '<name>Map Drawings</name>\n';
-
-            drawnItems.eachLayer(layer => {
-                if (layer instanceof L.Polygon) {
-                    kml += '<Placemark>\n';
-                    kml += '<name>Polygon</name>\n';
-                    kml += '<Polygon><outerBoundaryIs><LinearRing><coordinates>\n';
-                    const coords = layer.getLatLngs()[0];
-                    coords.forEach(ll => {
-                        kml += `${ll.lng},${ll.lat},0 `;
-                    });
-                    kml += '\n</coordinates></LinearRing></outerBoundaryIs></Polygon>\n';
-                    kml += '</Placemark>\n';
-                } else if (layer instanceof L.Circle) {
-                    // KML doesn't support circles, so we approximate with a polygon
-                    kml += '<Placemark>\n';
-                    kml += '<name>Circle</name>\n';
-                    kml += '<Polygon><outerBoundaryIs><LinearRing><coordinates>\n';
-                    const center = layer.getLatLng();
-                    const radius = layer.getRadius();
-                    for (let i = 0; i <= 36; i++) {
-                        const angle = (i * 10) * Math.PI / 180;
-                        const lat = center.lat + (radius / 110540) * Math.cos(angle);
-                        const lng = center.lng + (radius / (111320 * Math.cos(center.lat * Math.PI / 180))) * Math.sin(angle);
-                        kml += `${lng},${lat},0 `;
-                    }
-                    kml += '\n</coordinates></LinearRing></outerBoundaryIs></Polygon>\n';
-                    kml += '</Placemark>\n';
-                } else if (layer instanceof L.Polyline) {
-                    kml += '<Placemark>\n';
-                    kml += '<name>Measurement Line</name>\n';
-                    kml += '<LineString><coordinates>\n';
-                    const coords = layer.getLatLngs();
-                    coords.forEach(ll => {
-                        kml += `${ll.lng},${ll.lat},0 `;
-                    });
-                    kml += '\n</coordinates></LineString>\n';
-                    kml += '</Placemark>\n';
-                }
-            });
-
-            kml += '</Document>\n</kml>';
-
-            // Download
-            const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'drawings.kml';
-            a.click();
-            URL.revokeObjectURL(url);
         }
 
         // =====================================================
@@ -3446,148 +3172,6 @@
                 document.getElementById('btnSatelliteView').classList.add('active');
                 switchBasemap('ESRI Imagery');
             }
-        }
-
-        // =====================================================
-        // LOCATION SELECTION FUNCTIONS
-        // =====================================================
-        let selectedLocations = [];
-
-        function filterLocationList() {
-            const filter = document.getElementById('locationFilterInput').value.toLowerCase();
-            const items = document.querySelectorAll('#locationList .location-item');
-
-            items.forEach(item => {
-                const name = item.querySelector('.location-name').textContent.toLowerCase();
-                const id = item.querySelector('.location-id').textContent.toLowerCase();
-
-                if (name.includes(filter) || id.includes(filter)) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        }
-
-        function selectLocation(locId) {
-            const checkbox = document.getElementById(locId);
-            if (checkbox) {
-                checkbox.checked = !checkbox.checked;
-                onLocationSelect(checkbox);
-            }
-        }
-
-        function onLocationSelect(checkbox) {
-            const locItem = checkbox.closest('.location-item');
-
-            if (checkbox.checked) {
-                locItem.classList.add('selected');
-                if (!selectedLocations.includes(checkbox.id)) {
-                    selectedLocations.push(checkbox.id);
-                }
-            } else {
-                locItem.classList.remove('selected');
-                selectedLocations = selectedLocations.filter(id => id !== checkbox.id);
-            }
-
-            // Update stats panel if a location is selected
-            if (selectedLocations.length > 0) {
-                updateStatsPanel(checkbox.id);
-            }
-        }
-
-        // =====================================================
-        // STATS PANEL FUNCTIONS
-        // =====================================================
-        function updateStatsPanel(locationId) {
-            // This would normally fetch real data
-            // For now, using placeholder values
-            document.getElementById('statsLocationId').textContent = `Location: ${locationId}`;
-            document.getElementById('statTotal').textContent = Math.floor(Math.random() * 100);
-            document.getElementById('statFatal').textContent = Math.floor(Math.random() * 5);
-            document.getElementById('statKA').textContent = Math.floor(Math.random() * 10);
-            document.getElementById('statEPDO').textContent = Math.floor(Math.random() * 500);
-            document.getElementById('statPed').textContent = Math.floor(Math.random() * 5);
-            document.getElementById('statBike').textContent = Math.floor(Math.random() * 3);
-        }
-
-        function clearStatsSelection() {
-            selectedLocations = [];
-            document.querySelectorAll('#locationList .location-item').forEach(item => {
-                item.classList.remove('selected');
-                const cb = item.querySelector('input[type="checkbox"]');
-                if (cb) cb.checked = false;
-            });
-
-            document.getElementById('statsLocationId').textContent = 'Select a location';
-            document.getElementById('statTotal').textContent = '0';
-            document.getElementById('statFatal').textContent = '0';
-            document.getElementById('statKA').textContent = '0';
-            document.getElementById('statEPDO').textContent = '0';
-            document.getElementById('statPed').textContent = '0';
-            document.getElementById('statBike').textContent = '0';
-        }
-
-        function toggleRouteLabels() {
-            const show = document.getElementById('showRouteLabels').checked;
-            // Toggle route label visibility on map
-            console.log('Route labels:', show ? 'shown' : 'hidden');
-        }
-
-        // Stats panel action button placeholders
-        function openCMF() { alert('CMF feature - Coming soon'); }
-        function openMUTCD() { alert('MUTCD feature - Coming soon'); }
-        function openWarrants() { alert('Warrants feature - Coming soon'); }
-        function openGrants() { alert('Grants feature - Coming soon'); }
-        function openBAStudy() { alert('B/A Study feature - Coming soon'); }
-        function analyzeLocation() { alert('Analyze Location feature - Coming soon'); }
-        function analyzeAssets() { alert('Analyze Assets feature - Coming soon'); }
-        function generatePDFReport() { alert('PDF Report feature - Coming soon'); }
-        function exportStatsData() { alert('Export Stats feature - Coming soon'); }
-        function exportStatsKML() { alert('Export KML feature - Coming soon'); }
-
-        // =====================================================
-        // ASSET LAYERS FUNCTIONS
-        // =====================================================
-        const layerVisibility = {
-            roads: true,
-            intersections: false,
-            signals: false,
-            signs: false
-        };
-
-        function toggleLayer(layerId) {
-            layerVisibility[layerId] = !layerVisibility[layerId];
-            console.log(`Layer ${layerId}:`, layerVisibility[layerId] ? 'visible' : 'hidden');
-            // Would toggle actual map layer visibility here
-        }
-
-        function showAllLayers() {
-            Object.keys(layerVisibility).forEach(layerId => {
-                layerVisibility[layerId] = true;
-                const checkbox = document.getElementById('layer' + layerId.charAt(0).toUpperCase() + layerId.slice(1));
-                if (checkbox) checkbox.checked = true;
-            });
-            console.log('All layers shown');
-        }
-
-        function hideAllLayers() {
-            Object.keys(layerVisibility).forEach(layerId => {
-                layerVisibility[layerId] = false;
-                const checkbox = document.getElementById('layer' + layerId.charAt(0).toUpperCase() + layerId.slice(1));
-                if (checkbox) checkbox.checked = false;
-            });
-            console.log('All layers hidden');
-        }
-
-        // =====================================================
-        // DRAWING SELECTION PANEL FUNCTIONS
-        // =====================================================
-        function analyzeDrawingSelection() { alert('Analyze Drawing Selection - Coming soon'); }
-        function exportDrawingSelection() { alert('Export Drawing Selection - Coming soon'); }
-        function exportDrawingKML() { exportDrawingsToKML(); }
-        function clearDrawingSelection() {
-            clearAllDrawings();
         }
 
         // =====================================================
