@@ -2276,8 +2276,18 @@
         const OVERPASS_SERVERS = [
             'https://overpass-api.de/api/interpreter',
             'https://overpass.kumi.systems/api/interpreter',
-            'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+            'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+            'https://overpass.openstreetmap.ru/api/interpreter'
         ];
+
+        // Overpass API configuration
+        const OVERPASS_CONFIG = {
+            QUERY_TIMEOUT: 300,           // Overpass query timeout in seconds
+            FETCH_TIMEOUT: 180000,        // Client fetch timeout in ms (3 minutes)
+            MAX_RETRIES: 2,               // Retries per server
+            MAX_AREA_SQ_KM: 500,          // Max area before tile splitting
+            MAX_RESPONSE_SIZE: 536870912  // 512MB maxsize parameter
+        };
 
         // Data loading configuration
         const DATA_CONFIG = {
@@ -2763,68 +2773,267 @@
             }
         }
 
+        // Calculate approximate area in square kilometers
+        function calculateAreaSqKm(west, south, east, north) {
+            const latMid = (south + north) / 2;
+            const kmPerDegLat = 111.32;
+            const kmPerDegLon = 111.32 * Math.cos(latMid * Math.PI / 180);
+            const width = (east - west) * kmPerDegLon;
+            const height = (north - south) * kmPerDegLat;
+            return width * height;
+        }
+
+        // Split bounding box into tiles for large areas
+        function splitBoundingBox(west, south, east, north, maxAreaSqKm) {
+            const area = calculateAreaSqKm(west, south, east, north);
+            if (area <= maxAreaSqKm) {
+                return [{ west, south, east, north }];
+            }
+
+            // Split into 4 quadrants
+            const midLat = (south + north) / 2;
+            const midLon = (west + east) / 2;
+
+            const tiles = [
+                { west, south, east: midLon, north: midLat },           // SW
+                { west: midLon, south, east, north: midLat },           // SE
+                { west, south: midLat, east: midLon, north },           // NW
+                { west: midLon, south: midLat, east, north }            // NE
+            ];
+
+            // Recursively split if still too large
+            const result = [];
+            for (const tile of tiles) {
+                result.push(...splitBoundingBox(tile.west, tile.south, tile.east, tile.north, maxAreaSqKm));
+            }
+            return result;
+        }
+
+        // Get human-readable error message
+        function getOverpassErrorMessage(error) {
+            if (error.name === 'AbortError') {
+                return 'Request timed out - server took too long to respond';
+            }
+            if (error.message.includes('HTTP 429')) {
+                return 'Server busy - rate limited, please try again later';
+            }
+            if (error.message.includes('HTTP 504')) {
+                return 'Gateway timeout - server overloaded';
+            }
+            if (error.message.includes('HTTP 503')) {
+                return 'Service unavailable - server is down';
+            }
+            if (error.message.includes('HTTP 400')) {
+                return 'Bad request - query may be too complex';
+            }
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                return 'Network error - check your internet connection';
+            }
+            return error.message;
+        }
+
+        // Elapsed time tracker for loading UI
+        let elapsedTimeInterval = null;
+        let fetchStartTime = null;
+
+        function startElapsedTimer() {
+            fetchStartTime = Date.now();
+            elapsedTimeInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - fetchStartTime) / 1000);
+                const progressEl = document.getElementById('loadingProgress');
+                if (progressEl && progressEl.dataset.baseText) {
+                    progressEl.textContent = `${progressEl.dataset.baseText} - ${elapsed}s elapsed`;
+                }
+            }, 1000);
+        }
+
+        function stopElapsedTimer() {
+            if (elapsedTimeInterval) {
+                clearInterval(elapsedTimeInterval);
+                elapsedTimeInterval = null;
+            }
+            fetchStartTime = null;
+        }
+
+        function updateLoadingWithTimer(text, progress) {
+            const progressEl = document.getElementById('loadingProgress');
+            if (progressEl) {
+                progressEl.dataset.baseText = progress;
+            }
+            updateLoading(text, progress);
+        }
+
         // Fetch from Overpass API with fallback servers
         async function fetchFromOverpassAPI(j, west, south, east, north) {
             const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
                 'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
 
-            const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
-            const query = `[out:json][timeout:120];(${wayQueries});out body geom;`;
+            // Check if area needs tile splitting
+            const tiles = splitBoundingBox(west, south, east, north, OVERPASS_CONFIG.MAX_AREA_SQ_KM);
+            const needsTiling = tiles.length > 1;
 
-            let lastError = null;
+            if (needsTiling) {
+                console.log(`Large area detected, splitting into ${tiles.length} tiles`);
+                updateLoading('Large area detected...', `Splitting into ${tiles.length} tiles for better performance`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
 
-            for (let serverIndex = 0; serverIndex < OVERPASS_SERVERS.length; serverIndex++) {
-                const server = OVERPASS_SERVERS[serverIndex];
-                const serverName = new URL(server).hostname.split('.')[0];
+            let allElements = [];
+            const seenIds = new Set();
 
-                for (let attempt = 1; attempt <= 2; attempt++) {
-                    try {
-                        updateLoading(
-                            `Fetching road data...`,
-                            `Server: ${serverName} (attempt ${attempt}/2)`
-                        );
+            for (let tileIndex = 0; tileIndex < tiles.length; tileIndex++) {
+                const tile = tiles[tileIndex];
+                const tileProgress = needsTiling ? ` (tile ${tileIndex + 1}/${tiles.length})` : '';
 
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 90000);
+                const wayQueries = hwTypes.map(t =>
+                    `way["highway"="${t}"](${tile.south},${tile.west},${tile.north},${tile.east});`
+                ).join('\n');
+                const query = `[out:json][timeout:${OVERPASS_CONFIG.QUERY_TIMEOUT}][maxsize:${OVERPASS_CONFIG.MAX_RESPONSE_SIZE}];(${wayQueries});out body geom;`;
 
-                        const response = await fetch(server, {
-                            method: 'POST',
-                            body: `data=${encodeURIComponent(query)}`,
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            signal: controller.signal
-                        });
+                let lastError = null;
+                let tileSuccess = false;
+                const totalAttempts = OVERPASS_SERVERS.length * OVERPASS_CONFIG.MAX_RETRIES;
+                let currentAttempt = 0;
 
-                        clearTimeout(timeoutId);
+                startElapsedTimer();
 
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
+                for (let serverIndex = 0; serverIndex < OVERPASS_SERVERS.length && !tileSuccess; serverIndex++) {
+                    const server = OVERPASS_SERVERS[serverIndex];
+                    const serverName = new URL(server).hostname.split('.')[0];
+
+                    for (let attempt = 1; attempt <= OVERPASS_CONFIG.MAX_RETRIES && !tileSuccess; attempt++) {
+                        currentAttempt++;
+                        try {
+                            updateLoadingWithTimer(
+                                `Fetching road data...${tileProgress}`,
+                                `Server: ${serverName} (attempt ${currentAttempt}/${totalAttempts})`
+                            );
+
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), OVERPASS_CONFIG.FETCH_TIMEOUT);
+
+                            const response = await fetch(server, {
+                                method: 'POST',
+                                body: `data=${encodeURIComponent(query)}`,
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                signal: controller.signal
+                            });
+
+                            clearTimeout(timeoutId);
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+
+                            const data = await response.json();
+
+                            if (data && data.elements) {
+                                // Deduplicate elements across tiles
+                                for (const el of data.elements) {
+                                    if (!seenIds.has(el.id)) {
+                                        seenIds.add(el.id);
+                                        allElements.push(el);
+                                    }
+                                }
+                                tileSuccess = true;
+                                console.log(`Tile ${tileIndex + 1}/${tiles.length} loaded: ${data.elements.length} elements from ${serverName}`);
+                            }
+                        } catch (error) {
+                            lastError = error;
+                            const errorMsg = getOverpassErrorMessage(error);
+                            console.warn(`Overpass ${serverName} attempt ${attempt} failed:`, errorMsg);
+
+                            if (attempt < OVERPASS_CONFIG.MAX_RETRIES) {
+                                const waitTime = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s
+                                updateLoading('Retrying...', `${errorMsg}. Waiting ${waitTime/1000}s...`);
+                                await new Promise(resolve => setTimeout(resolve, waitTime));
+                            }
                         }
+                    }
 
-                        const data = await response.json();
-
-                        if (data && data.elements) {
-                            return data;
-                        }
-                    } catch (error) {
-                        lastError = error;
-                        console.warn(`Overpass ${serverName} attempt ${attempt} failed:`, error.message);
-
-                        if (attempt < 2) {
-                            const waitTime = attempt * 2000;
-                            updateLoading('Retrying...', `Waiting ${waitTime/1000}s before retry`);
-                            await new Promise(resolve => setTimeout(resolve, waitTime));
-                        }
+                    if (!tileSuccess && serverIndex < OVERPASS_SERVERS.length - 1) {
+                        updateLoading('Switching servers...', `Trying backup server ${serverIndex + 2}/${OVERPASS_SERVERS.length}`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
 
-                if (serverIndex < OVERPASS_SERVERS.length - 1) {
-                    updateLoading('Switching servers...', 'Trying backup server');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                stopElapsedTimer();
+
+                if (!tileSuccess) {
+                    const errorMsg = lastError ? getOverpassErrorMessage(lastError) : 'Unknown error';
+                    console.error(`All Overpass servers failed for tile ${tileIndex + 1}:`, errorMsg);
+
+                    // Show failure UI with retry option
+                    showOverpassFailure(errorMsg, j);
+                    return null;
                 }
             }
 
-            console.error('All Overpass servers failed:', lastError?.message);
+            if (allElements.length > 0) {
+                return { elements: allElements };
+            }
+
             return null;
+        }
+
+        // Show Overpass API failure with retry option
+        function showOverpassFailure(errorMsg, jurisdiction) {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.innerHTML = `
+                <div style="text-align: center; max-width: 400px; padding: 2rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                    <div style="color: var(--text-primary); font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                        Failed to Load Road Data
+                    </div>
+                    <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1rem;">
+                        ${errorMsg}
+                    </div>
+                    <div style="color: var(--text-muted); font-size: 0.7rem; margin-bottom: 1.5rem;">
+                        All ${OVERPASS_SERVERS.length} API servers were tried. This usually means the servers are overloaded.
+                        Try selecting a smaller area or try again later.
+                    </div>
+                    <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                        <button onclick="retryOverpassFetch('${jurisdiction.fips}')" style="
+                            background: var(--accent-cyan);
+                            color: var(--bg-primary);
+                            border: none;
+                            padding: 0.6rem 1.2rem;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-weight: 600;
+                            font-size: 0.8rem;
+                        ">Try Again</button>
+                        <button onclick="hideLoading(); resetLoadingOverlay();" style="
+                            background: var(--bg-tertiary);
+                            color: var(--text-secondary);
+                            border: 1px solid var(--border-color);
+                            padding: 0.6rem 1.2rem;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 0.8rem;
+                        ">Cancel</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Reset loading overlay to original state
+        function resetLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">Loading...</div>
+                <div class="loading-progress" id="loadingProgress"></div>
+            `;
+        }
+
+        // Retry Overpass fetch for a specific jurisdiction
+        async function retryOverpassFetch(fips) {
+            resetLoadingOverlay();
+            const j = JURISDICTIONS.find(jur => jur.fips === fips);
+            if (j) {
+                await loadRoadsForJurisdiction(j.fips);
+            }
         }
 
         // Finish loading and show data source
