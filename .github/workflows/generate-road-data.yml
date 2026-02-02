@@ -1,19 +1,11 @@
 name: Generate Road Data
 
 on:
-  # Automatic: Run every 60 days (1st day of every 2nd month)
-  schedule:
-    - cron: '0 2 1 */2 *'  # At 02:00 UTC on day 1 of every 2nd month
-
   # Manual: Click "Run workflow" button in GitHub Actions tab
   workflow_dispatch:
     inputs:
       jurisdictions:
-        description: 'Specific jurisdictions to generate (comma-separated, e.g., "henrico,fairfax"). Leave empty for all.'
-        required: false
-        default: ''
-      batch:
-        description: 'Batch number (1-9) for partial runs. Leave empty for all.'
+        description: 'Specific jurisdictions (comma-separated) or leave empty for ALL'
         required: false
         default: ''
 
@@ -25,109 +17,135 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '20'
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
 
       - name: Create data directories
-        run: |
-          mkdir -p data/roads
+        run: mkdir -p data/roads
 
       - name: Generate road data
         run: |
-          # Determine which jurisdictions to process
-          INPUT_JURISDICTIONS="${{ github.event.inputs.jurisdictions }}"
-          INPUT_BATCH="${{ github.event.inputs.batch }}"
+          cat << 'SCRIPT' > /tmp/generate.py
+          import json, os, time, math, requests
+          from datetime import datetime
 
-          # All Virginia jurisdictions grouped into 9 batches
-          BATCH_1="accomack albemarle alleghany amelia amherst appomattox arlington augusta bath bedford_county bland botetourt brunswick buchanan buckingham"
-          BATCH_2="campbell caroline carroll charles_city charlotte chesterfield clarke craig culpeper cumberland dickenson dinwiddie essex fairfax fauquier"
-          BATCH_3="floyd fluvanna franklin_county frederick giles gloucester goochland grayson greene greensville halifax hanover henrico henry highland"
-          BATCH_4="isle_of_wight james_city king_and_queen king_george king_william lancaster lee loudoun louisa lunenburg madison mathews mecklenburg middlesex montgomery"
-          BATCH_5="nelson new_kent northampton northumberland nottoway orange page patrick pittsylvania powhatan prince_edward prince_george prince_william pulaski rappahannock"
-          BATCH_6="richmond_county roanoke_county rockbridge rockingham russell scott shenandoah smyth southampton spotsylvania stafford surry sussex tazewell warren"
-          BATCH_7="washington westmoreland wise wythe york alexandria bristol buena_vista charlottesville chesapeake colonial_heights covington danville emporia"
-          BATCH_8="fairfax_city falls_church franklin_city fredericksburg galax hampton harrisonburg hopewell lexington lynchburg manassas manassas_park martinsville newport_news"
-          BATCH_9="norfolk norton petersburg poquoson portsmouth radford richmond_city roanoke_city salem staunton suffolk virginia_beach waynesboro williamsburg winchester"
+          CONFIG = {
+              'overpass_servers': [
+                  'https://overpass-api.de/api/interpreter',
+                  'https://overpass.kumi.systems/api/interpreter',
+                  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+                  'https://overpass.openstreetmap.ru/api/interpreter'
+              ],
+              'timeout': 300, 'retry_delay': 10, 'max_retries': 3, 'delay': 15
+          }
 
-          if [ -n "$INPUT_JURISDICTIONS" ]; then
-            # Process specific jurisdictions provided by user
-            JURISDICTIONS=$(echo "$INPUT_JURISDICTIONS" | tr ',' ' ')
-            echo "Processing user-specified jurisdictions: $JURISDICTIONS"
-          elif [ -n "$INPUT_BATCH" ]; then
-            # Process specific batch
-            case $INPUT_BATCH in
-              1) JURISDICTIONS="$BATCH_1" ;;
-              2) JURISDICTIONS="$BATCH_2" ;;
-              3) JURISDICTIONS="$BATCH_3" ;;
-              4) JURISDICTIONS="$BATCH_4" ;;
-              5) JURISDICTIONS="$BATCH_5" ;;
-              6) JURISDICTIONS="$BATCH_6" ;;
-              7) JURISDICTIONS="$BATCH_7" ;;
-              8) JURISDICTIONS="$BATCH_8" ;;
-              9) JURISDICTIONS="$BATCH_9" ;;
-              *) echo "Invalid batch number"; exit 1 ;;
-            esac
-            echo "Processing batch $INPUT_BATCH: $JURISDICTIONS"
-          else
-            # Process all jurisdictions (scheduled run)
-            JURISDICTIONS="$BATCH_1 $BATCH_2 $BATCH_3 $BATCH_4 $BATCH_5 $BATCH_6 $BATCH_7 $BATCH_8 $BATCH_9"
-            echo "Processing ALL jurisdictions"
-          fi
+          OSM_TO_VDOT = {'motorway': '1', 'motorway_link': '1', 'trunk': '2', 'trunk_link': '2', 'primary': '3', 'primary_link': '3', 'secondary': '4', 'secondary_link': '4', 'tertiary': '5', 'tertiary_link': '5', 'unclassified': '6', 'residential': '7'}
 
-          # Run the generator script
-          node scripts/generate-road-data.js $JURISDICTIONS
+          JURISDICTIONS = {"accomack": {"name": "Accomack County", "bbox": [-76.0533, 37.2918, -75.2429, 38.0274]}, "albemarle": {"name": "Albemarle County", "bbox": [-78.8399, 37.7273, -78.2637, 38.3034]}, "alleghany": {"name": "Alleghany County", "bbox": [-80.2213, 37.5672, -79.6473, 38.0134]}, "amelia": {"name": "Amelia County", "bbox": [-78.1777, 37.1458, -77.6553, 37.4678]}, "amherst": {"name": "Amherst County", "bbox": [-79.4745, 37.3962, -78.8591, 37.806]}, "appomattox": {"name": "Appomattox County", "bbox": [-79.0929, 37.2061, -78.5716, 37.5494]}, "arlington": {"name": "Arlington County", "bbox": [-77.1722, 38.8275, -77.032, 38.9341]}, "augusta": {"name": "Augusta County", "bbox": [-79.5431, 37.8873, -78.8617, 38.4767]}, "bath": {"name": "Bath County", "bbox": [-80.0564, 37.8573, -79.4479, 38.3947]}, "bedford_county": {"name": "Bedford County", "bbox": [-79.7888, 37.0341, -79.2507, 37.513]}, "bland": {"name": "Bland County", "bbox": [-81.3447, 36.9649, -80.8546, 37.2462]}, "botetourt": {"name": "Botetourt County", "bbox": [-80.074, 37.2847, -79.498, 37.8013]}, "brunswick": {"name": "Brunswick County", "bbox": [-78.0036, 36.5438, -77.6547, 37.0218]}, "buchanan": {"name": "Buchanan County", "bbox": [-82.3147, 37.0072, -81.7389, 37.5068]}, "buckingham": {"name": "Buckingham County", "bbox": [-78.8687, 37.3307, -78.2399, 37.7899]}, "campbell": {"name": "Campbell County", "bbox": [-79.4414, 37.0077, -78.8217, 37.4283]}, "caroline": {"name": "Caroline County", "bbox": [-77.6434, 37.7881, -77.0312, 38.3047]}, "carroll": {"name": "Carroll County", "bbox": [-80.9614, 36.5509, -80.4605, 36.9522]}, "charles_city": {"name": "Charles City County", "bbox": [-77.2495, 37.2423, -76.854, 37.4893]}, "charlotte": {"name": "Charlotte County", "bbox": [-78.9045, 36.7897, -78.3936, 37.2263]}, "chesterfield": {"name": "Chesterfield County", "bbox": [-77.8574, 37.1466, -77.3884, 37.5576]}, "clarke": {"name": "Clarke County", "bbox": [-78.1322, 39.0067, -77.8228, 39.2255]}, "craig": {"name": "Craig County", "bbox": [-80.4642, 37.2579, -79.9612, 37.6582]}, "culpeper": {"name": "Culpeper County", "bbox": [-78.2318, 38.2676, -77.6279, 38.7183]}, "cumberland": {"name": "Cumberland County", "bbox": [-78.4626, 37.3363, -78.0246, 37.6858]}, "dickenson": {"name": "Dickenson County", "bbox": [-82.5652, 37.0014, -82.0959, 37.2964]}, "dinwiddie": {"name": "Dinwiddie County", "bbox": [-77.9005, 36.8499, -77.3989, 37.3384]}, "essex": {"name": "Essex County", "bbox": [-77.1683, 37.7905, -76.6647, 38.1196]}, "fairfax": {"name": "Fairfax County", "bbox": [-77.5116, 38.5958, -77.0285, 39.0007]}, "fauquier": {"name": "Fauquier County", "bbox": [-78.0938, 38.4617, -77.5319, 38.9658]}, "floyd": {"name": "Floyd County", "bbox": [-80.5925, 36.7478, -80.0815, 37.0775]}, "fluvanna": {"name": "Fluvanna County", "bbox": [-78.5136, 37.6845, -78.0669, 38.0218]}, "franklin_county": {"name": "Franklin County", "bbox": [-80.1616, 36.7148, -79.5909, 37.2254]}, "frederick": {"name": "Frederick County", "bbox": [-78.5085, 39.0206, -78.0035, 39.3999]}, "giles": {"name": "Giles County", "bbox": [-80.9141, 37.1183, -80.4357, 37.5119]}, "gloucester": {"name": "Gloucester County", "bbox": [-76.7463, 37.2188, -76.2868, 37.5724]}, "goochland": {"name": "Goochland County", "bbox": [-78.1553, 37.5408, -77.6556, 37.8954]}, "grayson": {"name": "Grayson County", "bbox": [-81.5347, 36.5052, -80.9005, 36.8514]}, "greene": {"name": "Greene County", "bbox": [-78.6612, 38.1768, -78.2848, 38.4378]}, "greensville": {"name": "Greensville County", "bbox": [-77.7674, 36.5429, -77.2977, 36.8753]}, "halifax": {"name": "Halifax County", "bbox": [-79.2508, 36.5414, -78.6494, 37.0303]}, "hanover": {"name": "Hanover County", "bbox": [-77.7014, 37.5378, -77.1905, 38.0153]}, "henrico": {"name": "Henrico County", "bbox": [-77.6604, 37.3862, -77.1462, 37.7234]}, "henry": {"name": "Henry County", "bbox": [-80.0933, 36.5413, -79.6401, 36.8533]}, "highland": {"name": "Highland County", "bbox": [-79.8512, 38.1312, -79.2263, 38.5941]}, "isle_of_wight": {"name": "Isle of Wight County", "bbox": [-76.9259, 36.7127, -76.4226, 37.0703]}, "james_city": {"name": "James City County", "bbox": [-76.9275, 37.1767, -76.5866, 37.4387]}, "king_and_queen": {"name": "King and Queen County", "bbox": [-77.1485, 37.5269, -76.609, 37.9212]}, "king_george": {"name": "King George County", "bbox": [-77.3273, 38.1263, -76.9889, 38.4341]}, "king_william": {"name": "King William County", "bbox": [-77.3055, 37.5041, -76.8221, 37.8945]}, "lancaster": {"name": "Lancaster County", "bbox": [-76.6168, 37.5731, -76.2605, 37.8907]}, "lee": {"name": "Lee County", "bbox": [-83.4724, 36.5007, -82.8487, 36.9299]}, "loudoun": {"name": "Loudoun County", "bbox": [-77.9623, 38.8426, -77.3243, 39.3222]}, "louisa": {"name": "Louisa County", "bbox": [-78.2065, 37.8116, -77.6577, 38.2206]}, "lunenburg": {"name": "Lunenburg County", "bbox": [-78.5038, 36.7645, -78.0033, 37.1458]}, "madison": {"name": "Madison County", "bbox": [-78.4847, 38.2174, -78.0909, 38.5894]}, "mathews": {"name": "Mathews County", "bbox": [-76.4639, 37.2954, -76.1497, 37.5502]}, "mecklenburg": {"name": "Mecklenburg County", "bbox": [-78.6494, 36.5006, -78.0033, 36.9117]}, "middlesex": {"name": "Middlesex County", "bbox": [-76.7389, 37.4472, -76.2873, 37.7677]}, "montgomery": {"name": "Montgomery County", "bbox": [-80.6632, 36.9993, -80.1539, 37.3817]}, "nelson": {"name": "Nelson County", "bbox": [-79.1728, 37.5545, -78.6451, 38.0228]}, "new_kent": {"name": "New Kent County", "bbox": [-77.1857, 37.3514, -76.7696, 37.6717]}, "northampton": {"name": "Northampton County", "bbox": [-76.1329, 37.0697, -75.7194, 37.545]}, "northumberland": {"name": "Northumberland County", "bbox": [-76.5634, 37.7178, -76.1963, 38.0285]}, "nottoway": {"name": "Nottoway County", "bbox": [-78.2688, 36.9648, -77.8278, 37.3186]}, "orange": {"name": "Orange County", "bbox": [-78.3412, 38.0287, -77.7055, 38.4658]}, "page": {"name": "Page County", "bbox": [-78.6693, 38.4148, -78.2848, 38.8201]}, "patrick": {"name": "Patrick County", "bbox": [-80.5466, 36.5043, -80.0225, 36.8608]}, "pittsylvania": {"name": "Pittsylvania County", "bbox": [-79.7159, 36.5416, -79.0408, 37.1417]}, "powhatan": {"name": "Powhatan County", "bbox": [-78.1055, 37.3887, -77.6556, 37.6776]}, "prince_edward": {"name": "Prince Edward County", "bbox": [-78.6831, 37.0196, -78.1987, 37.4179]}, "prince_george": {"name": "Prince George County", "bbox": [-77.4461, 37.0065, -76.9276, 37.3594]}, "prince_william": {"name": "Prince William County", "bbox": [-77.7192, 38.5119, -77.2441, 38.8927]}, "pulaski": {"name": "Pulaski County", "bbox": [-80.9141, 36.9137, -80.4692, 37.2082]}, "rappahannock": {"name": "Rappahannock County", "bbox": [-78.3993, 38.4943, -78.0035, 38.8816]}, "richmond_county": {"name": "Richmond County", "bbox": [-76.9387, 37.8177, -76.5258, 38.0669]}, "roanoke_county": {"name": "Roanoke County", "bbox": [-80.2627, 37.1064, -79.8438, 37.4234]}, "rockbridge": {"name": "Rockbridge County", "bbox": [-79.8017, 37.5278, -79.0777, 38.0479]}, "rockingham": {"name": "Rockingham County", "bbox": [-79.2263, 38.1917, -78.5423, 38.8248]}, "russell": {"name": "Russell County", "bbox": [-82.3325, 36.7541, -81.8485, 37.1189]}, "scott": {"name": "Scott County", "bbox": [-82.9002, 36.5935, -82.3147, 36.8755]}, "shenandoah": {"name": "Shenandoah County", "bbox": [-78.8234, 38.6141, -78.3135, 39.1133]}, "smyth": {"name": "Smyth County", "bbox": [-81.8485, 36.7024, -81.2612, 37.0093]}, "southampton": {"name": "Southampton County", "bbox": [-77.4291, 36.5444, -76.7608, 36.9481]}, "spotsylvania": {"name": "Spotsylvania County", "bbox": [-77.8547, 37.9859, -77.3694, 38.4034]}, "stafford": {"name": "Stafford County", "bbox": [-77.6573, 38.2574, -77.2435, 38.6134]}, "surry": {"name": "Surry County", "bbox": [-77.1149, 36.9476, -76.5866, 37.3067]}, "sussex": {"name": "Sussex County", "bbox": [-77.5068, 36.6997, -76.9276, 37.1426]}, "tazewell": {"name": "Tazewell County", "bbox": [-81.8485, 36.9538, -81.2245, 37.3185]}, "warren": {"name": "Warren County", "bbox": [-78.3949, 38.7581, -78.0035, 39.0626]}, "washington": {"name": "Washington County", "bbox": [-82.3147, 36.5413, -81.6469, 36.9311]}, "westmoreland": {"name": "Westmoreland County", "bbox": [-77.0312, 37.9657, -76.5147, 38.2749]}, "wise": {"name": "Wise County", "bbox": [-82.9005, 36.8755, -82.3147, 37.1189]}, "wythe": {"name": "Wythe County", "bbox": [-81.3447, 36.7541, -80.8546, 37.0872]}, "york": {"name": "York County", "bbox": [-76.7521, 37.0891, -76.3845, 37.4133]}, "alexandria": {"name": "Alexandria City", "bbox": [-77.1441, 38.7852, -77.0268, 38.8452]}, "bristol": {"name": "Bristol City", "bbox": [-82.2162, 36.5755, -82.1126, 36.6447]}, "buena_vista": {"name": "Buena Vista City", "bbox": [-79.3905, 37.7047, -79.3158, 37.7654]}, "charlottesville": {"name": "Charlottesville City", "bbox": [-78.5234, 37.9966, -78.4429, 38.0653]}, "chesapeake": {"name": "Chesapeake City", "bbox": [-76.4912, 36.5499, -76.0553, 36.9228]}, "colonial_heights": {"name": "Colonial Heights City", "bbox": [-77.4275, 37.2259, -77.3627, 37.2883]}, "covington": {"name": "Covington City", "bbox": [-80.0186, 37.7686, -79.9661, 37.8122]}, "danville": {"name": "Danville City", "bbox": [-79.4914, 36.5423, -79.2996, 36.6479]}, "emporia": {"name": "Emporia City", "bbox": [-77.5734, 36.6657, -77.5066, 36.7142]}, "fairfax_city": {"name": "Fairfax City", "bbox": [-77.3413, 38.8305, -77.2765, 38.8692]}, "falls_church": {"name": "Falls Church City", "bbox": [-77.1952, 38.8608, -77.1519, 38.8942]}, "franklin_city": {"name": "Franklin City", "bbox": [-76.9668, 36.6595, -76.9067, 36.6993]}, "fredericksburg": {"name": "Fredericksburg City", "bbox": [-77.5054, 38.2703, -77.4244, 38.3385]}, "galax": {"name": "Galax City", "bbox": [-80.9558, 36.6323, -80.8858, 36.6877]}, "hampton": {"name": "Hampton City", "bbox": [-76.4912, 36.9657, -76.2489, 37.1329]}, "harrisonburg": {"name": "Harrisonburg City", "bbox": [-78.9148, 38.4086, -78.8317, 38.4895]}, "hopewell": {"name": "Hopewell City", "bbox": [-77.3278, 37.2652, -77.2576, 37.3337]}, "lexington": {"name": "Lexington City", "bbox": [-79.4615, 37.7656, -79.4224, 37.7993]}, "lynchburg": {"name": "Lynchburg City", "bbox": [-79.2532, 37.3435, -79.0476, 37.4741]}, "manassas": {"name": "Manassas City", "bbox": [-77.5127, 38.7226, -77.4416, 38.7793]}, "manassas_park": {"name": "Manassas Park City", "bbox": [-77.4632, 38.7545, -77.4234, 38.7855]}, "martinsville": {"name": "Martinsville City", "bbox": [-79.9096, 36.6611, -79.8322, 36.7189]}, "newport_news": {"name": "Newport News City", "bbox": [-76.6636, 36.9604, -76.3845, 37.2352]}, "norfolk": {"name": "Norfolk City", "bbox": [-76.3845, 36.7958, -76.1902, 36.9446]}, "norton": {"name": "Norton City", "bbox": [-82.6667, 36.9078, -82.6001, 36.9522]}, "petersburg": {"name": "Petersburg City", "bbox": [-77.4536, 37.1783, -77.3473, 37.2449]}, "poquoson": {"name": "Poquoson City", "bbox": [-76.4137, 37.0891, -76.2868, 37.1717]}, "portsmouth": {"name": "Portsmouth City", "bbox": [-76.4331, 36.7717, -76.2868, 36.9054]}, "radford": {"name": "Radford City", "bbox": [-80.6017, 37.1041, -80.5177, 37.1561]}, "richmond_city": {"name": "Richmond City", "bbox": [-77.5744, 37.4465, -77.3852, 37.5987]}, "roanoke_city": {"name": "Roanoke City", "bbox": [-80.0186, 37.2198, -79.8733, 37.3234]}, "salem": {"name": "Salem City", "bbox": [-80.1006, 37.2585, -79.9962, 37.3227]}, "staunton": {"name": "Staunton City", "bbox": [-79.1186, 38.1196, -79.0247, 38.1804]}, "suffolk": {"name": "Suffolk City", "bbox": [-76.8861, 36.5501, -76.3845, 36.9446]}, "virginia_beach": {"name": "Virginia Beach City", "bbox": [-76.1902, 36.5504, -75.8631, 36.9336]}, "waynesboro": {"name": "Waynesboro City", "bbox": [-78.9269, 38.0409, -78.8614, 38.0991]}, "williamsburg": {"name": "Williamsburg City", "bbox": [-76.7421, 37.2498, -76.683, 37.2972]}, "winchester": {"name": "Winchester City", "bbox": [-78.2074, 39.1383, -78.1252, 39.213]}}
+
+          def calc_length(coords):
+              total, R = 0.0, 3959
+              for i in range(len(coords) - 1):
+                  lat1, lon1, lat2, lon2 = coords[i][0], coords[i][1], coords[i + 1][0], coords[i + 1][1]
+                  d_lat, d_lon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+                  a = math.sin(d_lat / 2) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(d_lon / 2) ** 2
+                  total += R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+              return total
+
+          def fetch_road_data(jid):
+              j = JURISDICTIONS.get(jid)
+              if not j: return None
+              w, s, e, n = j['bbox']
+              hw = ['motorway', 'motorway_link', 'trunk', 'trunk_link', 'primary', 'primary_link', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link', 'unclassified']
+              q = f'[out:json][timeout:300][maxsize:536870912];({chr(10).join([f"way[highway={t}]({s},{w},{n},{e});" for t in hw])});out body geom;'
+              for srv in CONFIG['overpass_servers']:
+                  print(f"    Trying {srv.split('//')[1].split('.')[0]}...")
+                  for attempt in range(1, CONFIG['max_retries'] + 1):
+                      try:
+                          r = requests.post(srv, data={'data': q}, timeout=CONFIG['timeout'])
+                          if r.status_code == 200:
+                              ct = r.headers.get('content-type', '')
+                              if 'json' in ct:
+                                  d = r.json()
+                                  if d and 'elements' in d: return d
+                              else:
+                                  print(f"      Non-JSON response, trying next...")
+                      except Exception as ex:
+                          print(f"      Attempt {attempt}: {ex}")
+                          if attempt < CONFIG['max_retries']: time.sleep(CONFIG['retry_delay'])
+              return None
+
+          def process_and_save(jid, data):
+              j = JURISDICTIONS[jid]
+              roads, miles, fc = [], 0.0, {'1':0,'2':0,'3':0,'4':0,'5':0,'6':0,'7':0}
+              for el in data.get('elements', []):
+                  if el.get('type') != 'way' or not el.get('geometry'): continue
+                  tags, hw = el.get('tags', {}), el.get('tags', {}).get('highway', '')
+                  coords = [[p['lat'], p['lon']] for p in el['geometry']]
+                  length = calc_length(coords)
+                  roads.append({'id': el['id'], 'name': tags.get('name') or tags.get('ref') or f"Unnamed {hw}", 'highway': hw, 'funcClass': OSM_TO_VDOT.get(hw, '7'), 'length': round(length, 3), 'coords': coords})
+                  miles += length
+                  fc[OSM_TO_VDOT.get(hw, '7')] += 1
+              result = {'jurisdiction': jid, 'jurisdictionName': j['name'], 'generated': datetime.utcnow().isoformat() + 'Z', 'roadCount': len(roads), 'totalMiles': round(miles, 2), 'fcBreakdown': fc, 'roads': roads}
+              os.makedirs('data/roads', exist_ok=True)
+              with open(f'data/roads/{jid}.json', 'w') as f: json.dump(result, f)
+              return result
+
+          # Main
+          import sys
+          input_j = os.environ.get('INPUT_JURISDICTIONS', '').strip()
+          jlist = [x.strip() for x in input_j.split(',') if x.strip()] if input_j else list(JURISDICTIONS.keys())
+
+          print(f"Processing {len(jlist)} jurisdictions...")
+          manifest = {'generated': '', 'version': '1.0', 'jurisdictions': {}}
+
+          for i, jid in enumerate(jlist):
+              if jid not in JURISDICTIONS:
+                  print(f"[{i+1}/{len(jlist)}] SKIP: Unknown {jid}")
+                  continue
+              print(f"[{i+1}/{len(jlist)}] {JURISDICTIONS[jid]['name']}")
+              data = fetch_road_data(jid)
+              if not data:
+                  print("    FAILED")
+                  continue
+              result = process_and_save(jid, data)
+              manifest['jurisdictions'][jid] = {'available': True, 'roadCount': result['roadCount'], 'totalMiles': result['totalMiles']}
+              print(f"    {result['roadCount']} roads, {result['totalMiles']} mi - OK")
+              if i < len(jlist) - 1: time.sleep(CONFIG['delay'])
+
+          manifest['generated'] = datetime.utcnow().isoformat() + 'Z'
+          with open('data/manifest.json', 'w') as f: json.dump(manifest, f)
+          print("Done!")
+          SCRIPT
+
+          python /tmp/generate.py
         env:
-          NODE_OPTIONS: '--max-old-space-size=4096'
+          INPUT_JURISDICTIONS: ${{ github.event.inputs.jurisdictions }}
 
-      - name: Check for changes
-        id: check_changes
-        run: |
-          if [ -n "$(git status --porcelain data/)" ]; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-            echo "Changes detected in data folder"
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
-            echo "No changes detected"
-          fi
-
-      - name: Commit and push changes
-        if: steps.check_changes.outputs.changes == 'true'
+      - name: Commit and push
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-
-          # Add all data files
           git add data/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            FILE_COUNT=$(ls data/roads/*.json 2>/dev/null | wc -l)
+            git commit -m "Update road data ($FILE_COUNT jurisdictions)
 
-          # Create commit message with summary
-          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
-          FILE_COUNT=$(git diff --cached --name-only | wc -l)
-
-          git commit -m "Update road data ($FILE_COUNT files) - $TIMESTAMP
-
-          Automated update via GitHub Actions.
-
-          Trigger: ${{ github.event_name }}
-          Run ID: ${{ github.run_id }}"
-
-          git push
+          Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          Workflow: ${{ github.run_id }}"
+            git push
+          fi
 
       - name: Summary
         run: |
-          echo "## Road Data Generation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Date:** $(date -u +"%Y-%m-%d %H:%M UTC")" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -d "data/roads" ]; then
-            FILE_COUNT=$(ls -1 data/roads/*.json 2>/dev/null | wc -l)
-            TOTAL_SIZE=$(du -sh data/roads 2>/dev/null | cut -f1)
-            echo "**Files generated:** $FILE_COUNT" >> $GITHUB_STEP_SUMMARY
-            echo "**Total size:** $TOTAL_SIZE" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "## Road Data Generated" >> $GITHUB_STEP_SUMMARY
+          echo "Files: $(ls data/roads/*.json 2>/dev/null | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "Size: $(du -sh data/roads 2>/dev/null | cut -f1)" >> $GITHUB_STEP_SUMMARY
