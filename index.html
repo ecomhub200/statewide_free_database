@@ -948,53 +948,209 @@
         }
 
         /* ========================================
-           REDESIGNED DRAWING TOOLBAR - Vertical Side Panel
-           Professional GIS-style interface
+           UNIFIED MAP CONTROLS PANEL
+           Navigation + Drawing Tools Combined
            ======================================== */
-        .drawing-toolbar {
+        .map-controls {
             position: absolute;
-            top: 50%;
-            left: 12px;
-            transform: translateY(-50%);
+            top: 0.75rem;
+            left: 0.75rem;
+            z-index: 1000;
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
             background: rgba(17, 24, 39, 0.97);
             backdrop-filter: blur(16px);
-            padding: 0.75rem;
-            border-radius: 14px;
+            padding: 0.6rem;
+            border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-            z-index: 999;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .drawing-toolbar:hover {
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+
+        .map-controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
         }
-        .drawing-toolbar .toolbar-label {
-            font-size: 0.6rem;
+
+        .map-controls-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: 0.2rem 0;
+        }
+
+        .map-controls-label {
+            font-size: 0.55rem;
             font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.06em;
             text-align: center;
-            padding-bottom: 0.4rem;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 0.25rem;
+            padding: 0.2rem 0;
         }
-        .drawing-toolbar .toolbar-divider {
+
+        .map-control-btn {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(31, 41, 55, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 0.1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-control-btn .btn-label {
+            font-size: 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            line-height: 1;
+        }
+
+        .map-control-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .map-control-btn > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .map-control-btn:hover {
+            transform: translateX(2px);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .map-control-btn:hover::before {
+            opacity: 1;
+        }
+
+        .map-control-btn:hover .btn-label {
+            color: white;
+        }
+
+        .map-control-btn.active {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            transform: translateX(3px);
+        }
+
+        .map-control-btn.active::before {
+            opacity: 0;
+        }
+
+        .map-control-btn.active .btn-label {
+            color: white;
+        }
+
+        .map-control-btn.danger:hover::before {
+            background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+        }
+
+        .map-style-toggles {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .map-style-btn {
+            flex: 1;
+            width: 38px;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 6px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .map-style-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        .map-style-btn.active {
+            background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
+            border-color: var(--accent-blue);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .basemap-menu {
+            display: none;
+            position: absolute;
+            top: 0.75rem;
+            left: 60px;
+            background: rgba(17, 24, 39, 0.97);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            min-width: 130px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+        }
+
+        .basemap-menu.show {
+            display: block;
+        }
+
+        .basemap-option {
+            display: block;
             width: 100%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
-            margin: 0.25rem 0;
+            padding: 0.5rem 0.75rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .basemap-option:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .basemap-option.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        /* Legacy drawing toolbar - hidden, replaced by unified controls */
+        .drawing-toolbar {
+            display: none;
         }
         .drawing-tool-btn {
-            width: 44px;
-            height: 44px;
+            width: 38px;
+            height: 38px;
             padding: 0;
             background: linear-gradient(135deg, var(--bg-tertiary) 0%, rgba(31, 41, 55, 0.8) 100%);
             border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 10px;
+            border-radius: 8px;
             color: var(--text-secondary);
             font-size: 1.1rem;
             font-weight: 500;
@@ -1908,35 +2064,94 @@
         <section class="map-section">
             <div id="map"></div>
 
-            <!-- Drawing Toolbar - Vertical Side Panel -->
-            <div class="drawing-toolbar" id="drawingToolbar">
-                <span class="toolbar-label">Draw</span>
-                <button class="drawing-tool-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Draw polygon (P) - Click to add vertices, double-click to finish">
-                    <span>⬡</span>
-                    <span class="btn-label">Area</span>
-                </button>
-                <button class="drawing-tool-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Draw circle (C) - Click center, then click to set radius">
-                    <span>◯</span>
-                    <span class="btn-label">Radius</span>
-                </button>
-                <button class="drawing-tool-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure distance (M) - Click points, double-click to finish">
-                    <span>📏</span>
-                    <span class="btn-label">Dist</span>
-                </button>
-                <div class="toolbar-divider"></div>
-                <button class="drawing-tool-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear all drawings (Delete)">
-                    <span>✕</span>
-                    <span class="btn-label">Clear</span>
-                </button>
-                <div class="toolbar-divider"></div>
-                <div class="toolbar-map-toggle">
-                    <button class="toggle-btn active" onclick="switchMapStyle('street')" id="btnStreetView" title="Street Map">
+            <!-- Unified Map Controls Panel -->
+            <div class="map-controls" id="mapControlsPanel">
+                <!-- Map Navigation Controls -->
+                <div class="map-controls-section">
+                    <button class="map-control-btn" onclick="resetView()" title="Reset View (R)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                            <path d="M3 3v5h5"/>
+                        </svg>
+                    </button>
+                    <button class="map-control-btn" onclick="toggleBasemapMenu()" title="Change Basemap">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12,2 2,7 12,12 22,7"/>
+                            <polyline points="2,17 12,22 22,17"/>
+                            <polyline points="2,12 12,17 22,12"/>
+                        </svg>
+                    </button>
+                    <button class="map-control-btn" onclick="fitToBounds()" title="Fit to Data (F)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h6v6"/>
+                            <path d="M9 21H3v-6"/>
+                            <path d="M21 3l-7 7"/>
+                            <path d="M3 21l7-7"/>
+                        </svg>
+                    </button>
+                    <button class="map-control-btn" onclick="clearData()" title="Clear Data">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="map-controls-divider"></div>
+
+                <!-- Drawing Tools -->
+                <div class="map-controls-label">Draw</div>
+                <div class="map-controls-section">
+                    <button class="map-control-btn" id="btnDrawPolygon" onclick="startDrawing('polygon')" title="Draw Area (P) - Click to add points, double-click to finish">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/>
+                        </svg>
+                        <span class="btn-label">Area</span>
+                    </button>
+                    <button class="map-control-btn" id="btnDrawCircle" onclick="startDrawing('circle')" title="Draw Radius (C) - Click center, then click to set radius">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="12" x2="12" y2="6"/>
+                        </svg>
+                        <span class="btn-label">Radius</span>
+                    </button>
+                    <button class="map-control-btn" id="btnMeasure" onclick="startDrawing('measure')" title="Measure Distance (M) - Click points, double-click to finish">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 3l4 4-4 4"/>
+                            <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                            <path d="M7 21l-4-4 4-4"/>
+                            <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                        </svg>
+                        <span class="btn-label">Dist</span>
+                    </button>
+                    <button class="map-control-btn danger" id="btnClearDrawing" onclick="clearAllDrawings()" title="Clear Drawings (Delete)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        <span class="btn-label">Clear</span>
+                    </button>
+                </div>
+
+                <div class="map-controls-divider"></div>
+
+                <!-- Map Style Toggle -->
+                <div class="map-style-toggles">
+                    <button class="map-style-btn active" onclick="switchMapStyle('street')" id="btnStreetView" title="Street Map">
                         🗺️
                     </button>
-                    <button class="toggle-btn" onclick="switchMapStyle('satellite')" id="btnSatelliteView" title="Satellite View">
+                    <button class="map-style-btn" onclick="switchMapStyle('satellite')" id="btnSatelliteView" title="Satellite">
                         🛰️
                     </button>
                 </div>
+            </div>
+
+            <!-- Basemap Menu (positioned separately) -->
+            <div class="basemap-menu" id="basemapMenu">
+                <button class="basemap-option active" onclick="switchBasemap('CARTO Light')">CARTO Light</button>
+                <button class="basemap-option" onclick="switchBasemap('OpenStreetMap')">OpenStreetMap</button>
+                <button class="basemap-option" onclick="switchBasemap('ESRI Street Map')">ESRI Street</button>
+                <button class="basemap-option" onclick="switchBasemap('ESRI Imagery')">ESRI Imagery</button>
             </div>
 
             <!-- Drawing Context Panel - Shows instructions during drawing -->
@@ -2028,45 +2243,7 @@
                 <div class="loading-text" id="loadingText">Loading...</div>
                 <div class="loading-progress" id="loadingProgress"></div>
             </div>
-            
-            <div class="map-controls">
-                <button class="map-control-btn" onclick="resetView()" title="Reset View">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                        <path d="M3 3v5h5"/>
-                    </svg>
-                </button>
-                <div class="basemap-dropdown">
-                    <button class="map-control-btn" onclick="toggleBasemapMenu()" title="Change Basemap">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="12,2 2,7 12,12 22,7"/>
-                            <polyline points="2,17 12,22 22,17"/>
-                            <polyline points="2,12 12,17 22,12"/>
-                        </svg>
-                    </button>
-                    <div class="basemap-menu" id="basemapMenu">
-                        <button class="basemap-option active" onclick="switchBasemap('CARTO Light')">CARTO Light</button>
-                        <button class="basemap-option" onclick="switchBasemap('OpenStreetMap')">OpenStreetMap</button>
-                        <button class="basemap-option" onclick="switchBasemap('ESRI Street Map')">ESRI Street</button>
-                        <button class="basemap-option" onclick="switchBasemap('ESRI Imagery')">ESRI Imagery</button>
-                    </div>
-                </div>
-                <button class="map-control-btn" onclick="fitToBounds()" title="Fit to Data">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M15 3h6v6"/>
-                        <path d="M9 21H3v-6"/>
-                        <path d="M21 3l-7 7"/>
-                        <path d="M3 21l7-7"/>
-                    </svg>
-                </button>
-                <button class="map-control-btn" onclick="clearData()" title="Clear">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                </button>
-            </div>
-            
+
             <div class="map-info-overlay">
                 <span class="coords" id="mapCoords">37.5407, -77.4360</span>
                 <span class="zoom-level" id="mapZoom">Zoom: 8</span>
@@ -2276,18 +2453,8 @@
         const OVERPASS_SERVERS = [
             'https://overpass-api.de/api/interpreter',
             'https://overpass.kumi.systems/api/interpreter',
-            'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-            'https://overpass.openstreetmap.ru/api/interpreter'
+            'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
         ];
-
-        // Overpass API configuration
-        const OVERPASS_CONFIG = {
-            QUERY_TIMEOUT: 300,           // Overpass query timeout in seconds
-            FETCH_TIMEOUT: 180000,        // Client fetch timeout in ms (3 minutes)
-            MAX_RETRIES: 2,               // Retries per server
-            MAX_AREA_SQ_KM: 500,          // Max area before tile splitting
-            MAX_RESPONSE_SIZE: 536870912  // 512MB maxsize parameter
-        };
 
         // Data loading configuration
         const DATA_CONFIG = {
@@ -2773,267 +2940,68 @@
             }
         }
 
-        // Calculate approximate area in square kilometers
-        function calculateAreaSqKm(west, south, east, north) {
-            const latMid = (south + north) / 2;
-            const kmPerDegLat = 111.32;
-            const kmPerDegLon = 111.32 * Math.cos(latMid * Math.PI / 180);
-            const width = (east - west) * kmPerDegLon;
-            const height = (north - south) * kmPerDegLat;
-            return width * height;
-        }
-
-        // Split bounding box into tiles for large areas
-        function splitBoundingBox(west, south, east, north, maxAreaSqKm) {
-            const area = calculateAreaSqKm(west, south, east, north);
-            if (area <= maxAreaSqKm) {
-                return [{ west, south, east, north }];
-            }
-
-            // Split into 4 quadrants
-            const midLat = (south + north) / 2;
-            const midLon = (west + east) / 2;
-
-            const tiles = [
-                { west, south, east: midLon, north: midLat },           // SW
-                { west: midLon, south, east, north: midLat },           // SE
-                { west, south: midLat, east: midLon, north },           // NW
-                { west: midLon, south: midLat, east, north }            // NE
-            ];
-
-            // Recursively split if still too large
-            const result = [];
-            for (const tile of tiles) {
-                result.push(...splitBoundingBox(tile.west, tile.south, tile.east, tile.north, maxAreaSqKm));
-            }
-            return result;
-        }
-
-        // Get human-readable error message
-        function getOverpassErrorMessage(error) {
-            if (error.name === 'AbortError') {
-                return 'Request timed out - server took too long to respond';
-            }
-            if (error.message.includes('HTTP 429')) {
-                return 'Server busy - rate limited, please try again later';
-            }
-            if (error.message.includes('HTTP 504')) {
-                return 'Gateway timeout - server overloaded';
-            }
-            if (error.message.includes('HTTP 503')) {
-                return 'Service unavailable - server is down';
-            }
-            if (error.message.includes('HTTP 400')) {
-                return 'Bad request - query may be too complex';
-            }
-            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                return 'Network error - check your internet connection';
-            }
-            return error.message;
-        }
-
-        // Elapsed time tracker for loading UI
-        let elapsedTimeInterval = null;
-        let fetchStartTime = null;
-
-        function startElapsedTimer() {
-            fetchStartTime = Date.now();
-            elapsedTimeInterval = setInterval(() => {
-                const elapsed = Math.floor((Date.now() - fetchStartTime) / 1000);
-                const progressEl = document.getElementById('loadingProgress');
-                if (progressEl && progressEl.dataset.baseText) {
-                    progressEl.textContent = `${progressEl.dataset.baseText} - ${elapsed}s elapsed`;
-                }
-            }, 1000);
-        }
-
-        function stopElapsedTimer() {
-            if (elapsedTimeInterval) {
-                clearInterval(elapsedTimeInterval);
-                elapsedTimeInterval = null;
-            }
-            fetchStartTime = null;
-        }
-
-        function updateLoadingWithTimer(text, progress) {
-            const progressEl = document.getElementById('loadingProgress');
-            if (progressEl) {
-                progressEl.dataset.baseText = progress;
-            }
-            updateLoading(text, progress);
-        }
-
         // Fetch from Overpass API with fallback servers
         async function fetchFromOverpassAPI(j, west, south, east, north) {
             const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
                 'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
 
-            // Check if area needs tile splitting
-            const tiles = splitBoundingBox(west, south, east, north, OVERPASS_CONFIG.MAX_AREA_SQ_KM);
-            const needsTiling = tiles.length > 1;
+            const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
+            const query = `[out:json][timeout:120];(${wayQueries});out body geom;`;
 
-            if (needsTiling) {
-                console.log(`Large area detected, splitting into ${tiles.length} tiles`);
-                updateLoading('Large area detected...', `Splitting into ${tiles.length} tiles for better performance`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-            }
+            let lastError = null;
 
-            let allElements = [];
-            const seenIds = new Set();
+            for (let serverIndex = 0; serverIndex < OVERPASS_SERVERS.length; serverIndex++) {
+                const server = OVERPASS_SERVERS[serverIndex];
+                const serverName = new URL(server).hostname.split('.')[0];
 
-            for (let tileIndex = 0; tileIndex < tiles.length; tileIndex++) {
-                const tile = tiles[tileIndex];
-                const tileProgress = needsTiling ? ` (tile ${tileIndex + 1}/${tiles.length})` : '';
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                    try {
+                        updateLoading(
+                            `Fetching road data...`,
+                            `Server: ${serverName} (attempt ${attempt}/2)`
+                        );
 
-                const wayQueries = hwTypes.map(t =>
-                    `way["highway"="${t}"](${tile.south},${tile.west},${tile.north},${tile.east});`
-                ).join('\n');
-                const query = `[out:json][timeout:${OVERPASS_CONFIG.QUERY_TIMEOUT}][maxsize:${OVERPASS_CONFIG.MAX_RESPONSE_SIZE}];(${wayQueries});out body geom;`;
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 90000);
 
-                let lastError = null;
-                let tileSuccess = false;
-                const totalAttempts = OVERPASS_SERVERS.length * OVERPASS_CONFIG.MAX_RETRIES;
-                let currentAttempt = 0;
+                        const response = await fetch(server, {
+                            method: 'POST',
+                            body: `data=${encodeURIComponent(query)}`,
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            signal: controller.signal
+                        });
 
-                startElapsedTimer();
+                        clearTimeout(timeoutId);
 
-                for (let serverIndex = 0; serverIndex < OVERPASS_SERVERS.length && !tileSuccess; serverIndex++) {
-                    const server = OVERPASS_SERVERS[serverIndex];
-                    const serverName = new URL(server).hostname.split('.')[0];
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
 
-                    for (let attempt = 1; attempt <= OVERPASS_CONFIG.MAX_RETRIES && !tileSuccess; attempt++) {
-                        currentAttempt++;
-                        try {
-                            updateLoadingWithTimer(
-                                `Fetching road data...${tileProgress}`,
-                                `Server: ${serverName} (attempt ${currentAttempt}/${totalAttempts})`
-                            );
+                        const data = await response.json();
 
-                            const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), OVERPASS_CONFIG.FETCH_TIMEOUT);
+                        if (data && data.elements) {
+                            return data;
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        console.warn(`Overpass ${serverName} attempt ${attempt} failed:`, error.message);
 
-                            const response = await fetch(server, {
-                                method: 'POST',
-                                body: `data=${encodeURIComponent(query)}`,
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                signal: controller.signal
-                            });
-
-                            clearTimeout(timeoutId);
-
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}`);
-                            }
-
-                            const data = await response.json();
-
-                            if (data && data.elements) {
-                                // Deduplicate elements across tiles
-                                for (const el of data.elements) {
-                                    if (!seenIds.has(el.id)) {
-                                        seenIds.add(el.id);
-                                        allElements.push(el);
-                                    }
-                                }
-                                tileSuccess = true;
-                                console.log(`Tile ${tileIndex + 1}/${tiles.length} loaded: ${data.elements.length} elements from ${serverName}`);
-                            }
-                        } catch (error) {
-                            lastError = error;
-                            const errorMsg = getOverpassErrorMessage(error);
-                            console.warn(`Overpass ${serverName} attempt ${attempt} failed:`, errorMsg);
-
-                            if (attempt < OVERPASS_CONFIG.MAX_RETRIES) {
-                                const waitTime = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s
-                                updateLoading('Retrying...', `${errorMsg}. Waiting ${waitTime/1000}s...`);
-                                await new Promise(resolve => setTimeout(resolve, waitTime));
-                            }
+                        if (attempt < 2) {
+                            const waitTime = attempt * 2000;
+                            updateLoading('Retrying...', `Waiting ${waitTime/1000}s before retry`);
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
                         }
                     }
-
-                    if (!tileSuccess && serverIndex < OVERPASS_SERVERS.length - 1) {
-                        updateLoading('Switching servers...', `Trying backup server ${serverIndex + 2}/${OVERPASS_SERVERS.length}`);
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
                 }
 
-                stopElapsedTimer();
-
-                if (!tileSuccess) {
-                    const errorMsg = lastError ? getOverpassErrorMessage(lastError) : 'Unknown error';
-                    console.error(`All Overpass servers failed for tile ${tileIndex + 1}:`, errorMsg);
-
-                    // Show failure UI with retry option
-                    showOverpassFailure(errorMsg, j);
-                    return null;
+                if (serverIndex < OVERPASS_SERVERS.length - 1) {
+                    updateLoading('Switching servers...', 'Trying backup server');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
             }
 
-            if (allElements.length > 0) {
-                return { elements: allElements };
-            }
-
+            console.error('All Overpass servers failed:', lastError?.message);
             return null;
-        }
-
-        // Show Overpass API failure with retry option
-        function showOverpassFailure(errorMsg, jurisdiction) {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.innerHTML = `
-                <div style="text-align: center; max-width: 400px; padding: 2rem;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
-                    <div style="color: var(--text-primary); font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem;">
-                        Failed to Load Road Data
-                    </div>
-                    <div style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1rem;">
-                        ${errorMsg}
-                    </div>
-                    <div style="color: var(--text-muted); font-size: 0.7rem; margin-bottom: 1.5rem;">
-                        All ${OVERPASS_SERVERS.length} API servers were tried. This usually means the servers are overloaded.
-                        Try selecting a smaller area or try again later.
-                    </div>
-                    <div style="display: flex; gap: 0.75rem; justify-content: center;">
-                        <button onclick="retryOverpassFetch('${jurisdiction.fips}')" style="
-                            background: var(--accent-cyan);
-                            color: var(--bg-primary);
-                            border: none;
-                            padding: 0.6rem 1.2rem;
-                            border-radius: 6px;
-                            cursor: pointer;
-                            font-weight: 600;
-                            font-size: 0.8rem;
-                        ">Try Again</button>
-                        <button onclick="hideLoading(); resetLoadingOverlay();" style="
-                            background: var(--bg-tertiary);
-                            color: var(--text-secondary);
-                            border: 1px solid var(--border-color);
-                            padding: 0.6rem 1.2rem;
-                            border-radius: 6px;
-                            cursor: pointer;
-                            font-size: 0.8rem;
-                        ">Cancel</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        // Reset loading overlay to original state
-        function resetLoadingOverlay() {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.innerHTML = `
-                <div class="loading-spinner"></div>
-                <div class="loading-text" id="loadingText">Loading...</div>
-                <div class="loading-progress" id="loadingProgress"></div>
-            `;
-        }
-
-        // Retry Overpass fetch for a specific jurisdiction
-        async function retryOverpassFetch(fips) {
-            resetLoadingOverlay();
-            const j = JURISDICTIONS.find(jur => jur.fips === fips);
-            if (j) {
-                await loadRoadsForJurisdiction(j.fips);
-            }
         }
 
         // Finish loading and show data source
