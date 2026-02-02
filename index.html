@@ -348,32 +348,44 @@
             color: var(--text-muted);
         }
         
-        .search-box { position: relative; margin-bottom: 1rem; }
-        
+        .map-search-box {
+            position: absolute;
+            top: 0.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 320px;
+            max-width: calc(100% - 100px);
+        }
+
         .search-input {
             width: 100%;
-            padding: 0.5rem 0.75rem 0.5rem 2rem;
-            background: var(--bg-card);
+            padding: 0.625rem 1rem 0.625rem 2.25rem;
+            background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 5px;
+            border-radius: 6px;
             color: var(--text-primary);
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
-        
+
         .search-input::placeholder { color: var(--text-muted); }
-        
+
         .search-input:focus {
             outline: none;
             border-color: var(--accent-blue);
+            box-shadow: 0 2px 12px rgba(59, 130, 246, 0.2);
         }
-        
-        .search-icon {
+
+        .map-search-box .search-icon {
             position: absolute;
-            left: 0.625rem;
-            top: 0.625rem;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
             color: var(--text-muted);
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
+            pointer-events: none;
         }
 
         .search-results {
@@ -384,11 +396,12 @@
             right: 0;
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
-            border-radius: 0 0 5px 5px;
-            max-height: 200px;
+            border-radius: 0 0 6px 6px;
+            max-height: 250px;
             overflow-y: auto;
-            z-index: 100;
+            z-index: 1001;
             margin-top: -1px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .search-results.show { display: block; }
@@ -762,6 +775,7 @@
             position: sticky;
             top: 0;
             background: var(--bg-secondary);
+            z-index: 10;
         }
         
         .road-table td {
@@ -885,15 +899,6 @@
 
     <div class="main-container">
         <aside class="sidebar-left">
-            <div class="search-box">
-                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                </svg>
-                <input type="text" class="search-input" placeholder="Search address or location..." id="addressSearch" oninput="debounceSearch()" onkeydown="handleSearchKeydown(event)">
-                <div class="search-results" id="searchResults"></div>
-            </div>
-            
             <div class="section-title">Statistics</div>
             <div class="stats-grid">
                 <div class="stat-card">
@@ -969,7 +974,16 @@
 
         <section class="map-section">
             <div id="map"></div>
-            
+
+            <div class="map-search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" placeholder="Search address or location..." id="addressSearch" oninput="debounceSearch()" onkeydown="handleSearchKeydown(event)">
+                <div class="search-results" id="searchResults"></div>
+            </div>
+
             <div class="loading-overlay hidden" id="loadingOverlay">
                 <div class="loading-spinner"></div>
                 <div class="loading-text" id="loadingText">Loading...</div>
@@ -1857,7 +1871,7 @@
 
         // Close search results when clicking outside
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.search-box')) {
+            if (!e.target.closest('.map-search-box')) {
                 hideSearchResults();
             }
         });
