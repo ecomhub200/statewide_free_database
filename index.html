@@ -1240,8 +1240,17 @@
             'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
         ];
 
-        // Cache configuration
-        const CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+        // Data loading configuration
+        const DATA_CONFIG = {
+            CACHE_MAX_AGE: 7 * 24 * 60 * 60 * 1000,      // 7 days - use IndexedDB cache
+            STATIC_MAX_AGE: 60 * 24 * 60 * 60 * 1000,   // 60 days - auto-refresh from API
+            STATIC_DATA_PATH: 'data/roads',              // Path to static JSON files
+            MANIFEST_PATH: 'data/manifest.json'          // Path to manifest file
+        };
+
+        // Manifest cache (loaded once)
+        let dataManifest = null;
+        let currentDataSource = null; // 'cache', 'static', 'api', 'stale'
         
         // OSM to VDOT mapping
         const OSM_TO_VDOT = {
@@ -1516,10 +1525,71 @@
             // Auto-load roads after boundary is set
             await loadRoadData();
         }
-        
+
         // =====================================================
-        // ROAD DATA LOADING
+        // ROAD DATA LOADING - Hybrid: Cache → Static → API
         // =====================================================
+
+        // Load manifest file (contains info about available static data)
+        async function loadManifest() {
+            if (dataManifest) return dataManifest;
+
+            try {
+                const response = await fetch(DATA_CONFIG.MANIFEST_PATH);
+                if (response.ok) {
+                    dataManifest = await response.json();
+                    console.log('Manifest loaded:', Object.keys(dataManifest.jurisdictions).length, 'jurisdictions');
+                }
+            } catch (error) {
+                console.warn('Could not load manifest:', error.message);
+            }
+            return dataManifest;
+        }
+
+        // Load static JSON file for a jurisdiction
+        async function loadStaticData(jurisdictionId) {
+            try {
+                const url = `${DATA_CONFIG.STATIC_DATA_PATH}/${jurisdictionId}.json`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    return await response.json();
+                }
+            } catch (error) {
+                console.warn(`Static file not available for ${jurisdictionId}:`, error.message);
+            }
+            return null;
+        }
+
+        // Convert static data format to OSM format for processing
+        function staticToOsmFormat(staticData) {
+            return {
+                elements: staticData.roads.map(road => ({
+                    type: 'way',
+                    id: road.id,
+                    tags: {
+                        name: road.name,
+                        highway: road.highway,
+                        ref: road.ref,
+                        lanes: road.lanes,
+                        maxspeed: road.maxspeed,
+                        surface: road.surface
+                    },
+                    geometry: road.coords.map(([lat, lon]) => ({ lat, lon }))
+                }))
+            };
+        }
+
+        // Format age display
+        function formatAge(timestamp) {
+            const age = Date.now() - new Date(timestamp).getTime();
+            const hours = Math.round(age / (1000 * 60 * 60));
+            const days = Math.round(hours / 24);
+            if (hours < 24) return `${hours}h ago`;
+            if (days < 7) return `${days}d ago`;
+            return new Date(timestamp).toLocaleDateString();
+        }
+
+        // Main data loading function - Hybrid approach
         async function loadRoadData(forceRefresh = false) {
             if (!currentJurisdiction) {
                 alert('Please select a jurisdiction first');
@@ -1533,139 +1603,113 @@
             document.getElementById('refreshBtn').disabled = true;
 
             let cachedData = null;
+            let staticData = null;
+            let fallbackData = null;
+            let fallbackSource = null;
 
             try {
                 clearRoads();
+                hideCacheWarning();
+                hideDataSourceBadge();
 
-                // Check cache first (unless forcing refresh)
-                showLoading(`Loading ${j.name}...`, 'Checking local cache');
-                cachedData = await getRoadCache(currentJurisdiction);
+                // ========================================
+                // STEP 1: Check IndexedDB Cache (< 7 days)
+                // ========================================
+                if (!forceRefresh) {
+                    showLoading(`Loading ${j.name}...`, 'Checking local cache');
+                    cachedData = await getRoadCache(currentJurisdiction);
 
-                if (cachedData && cachedData.osmData && !forceRefresh) {
-                    const cacheAge = Date.now() - cachedData.timestamp;
-                    const cacheAgeHours = Math.round(cacheAge / (1000 * 60 * 60));
-                    const cacheAgeDisplay = cacheAgeHours < 24 ? `${cacheAgeHours}h ago` : `${Math.round(cacheAgeHours/24)}d ago`;
+                    if (cachedData && cachedData.osmData) {
+                        const cacheAge = Date.now() - cachedData.timestamp;
 
-                    // Check if cache is still valid (within 7 days)
-                    if (cacheAge < CACHE_MAX_AGE) {
-                        updateLoading('Loading from cache...', `Cached ${cacheAgeDisplay}`);
-                        await processRoadDataAsync(cachedData.osmData);
-                        updateStats();
-                        updateRoadTable();
-                        displayAllSegmentsSummary();
-                        hideLoading();
-                        return;
-                    } else {
-                        // Cache expired, will fetch fresh but keep as fallback
-                        updateLoading('Cache expired...', 'Fetching fresh data');
+                        if (cacheAge < DATA_CONFIG.CACHE_MAX_AGE) {
+                            // Cache is fresh - use it!
+                            currentDataSource = 'cache';
+                            updateLoading('Loading from cache...', `Cached ${formatAge(cachedData.timestamp)}`);
+                            await processRoadDataAsync(cachedData.osmData);
+                            finishLoading('cache', cachedData.timestamp);
+                            return;
+                        } else {
+                            // Cache exists but expired - save as fallback
+                            fallbackData = cachedData.osmData;
+                            fallbackSource = { type: 'cache', timestamp: cachedData.timestamp };
+                        }
                     }
                 }
 
-                // Fetch from OSM with fallback servers
-                const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
-                    'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
+                // ========================================
+                // STEP 2: Check Static File (< 60 days)
+                // ========================================
+                if (!forceRefresh) {
+                    showLoading(`Loading ${j.name}...`, 'Checking pre-loaded data');
 
-                const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
-                const query = `[out:json][timeout:120];(${wayQueries});out body geom;`;
+                    // Load manifest to check if static file exists
+                    await loadManifest();
+                    const manifestEntry = dataManifest?.jurisdictions?.[currentJurisdiction];
 
-                let data = null;
-                let lastError = null;
+                    if (manifestEntry?.available) {
+                        staticData = await loadStaticData(currentJurisdiction);
 
-                // Try each Overpass server with retry logic
-                for (let serverIndex = 0; serverIndex < OVERPASS_SERVERS.length; serverIndex++) {
-                    const server = OVERPASS_SERVERS[serverIndex];
-                    const serverName = new URL(server).hostname.split('.')[0];
+                        if (staticData) {
+                            const staticAge = Date.now() - new Date(staticData.generated).getTime();
 
-                    for (let attempt = 1; attempt <= 2; attempt++) {
-                        try {
-                            updateLoading(
-                                `Fetching road data...`,
-                                `Server: ${serverName} (attempt ${attempt}/2)`
-                            );
+                            if (staticAge < DATA_CONFIG.STATIC_MAX_AGE) {
+                                // Static file is fresh enough - use it!
+                                currentDataSource = 'static';
+                                updateLoading('Loading pre-loaded data...', `Updated ${formatAge(staticData.generated)}`);
+                                const osmFormat = staticToOsmFormat(staticData);
+                                await processRoadDataAsync(osmFormat);
 
-                            const controller = new AbortController();
-                            const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+                                // Also save to cache for faster future access
+                                await saveRoadCache(currentJurisdiction, osmFormat);
 
-                            const response = await fetch(server, {
-                                method: 'POST',
-                                body: `data=${encodeURIComponent(query)}`,
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                signal: controller.signal
-                            });
-
-                            clearTimeout(timeoutId);
-
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}`);
-                            }
-
-                            data = await response.json();
-
-                            if (data && data.elements) {
-                                updateLoading('Success!', `${data.elements.length} road segments received`);
-                                break; // Success! Exit retry loop
-                            }
-                        } catch (error) {
-                            lastError = error;
-                            console.warn(`Overpass ${serverName} attempt ${attempt} failed:`, error.message);
-
-                            if (attempt < 2) {
-                                // Wait before retry (exponential backoff)
-                                const waitTime = attempt * 2000;
-                                updateLoading('Retrying...', `Waiting ${waitTime/1000}s before retry`);
-                                await new Promise(resolve => setTimeout(resolve, waitTime));
+                                finishLoading('static', staticData.generated);
+                                return;
+                            } else {
+                                // Static file is outdated (> 60 days) - will fetch from API
+                                // But save as fallback
+                                fallbackData = staticToOsmFormat(staticData);
+                                fallbackSource = { type: 'static', timestamp: staticData.generated };
+                                updateLoading('Data outdated...', 'Auto-refreshing from API');
                             }
                         }
                     }
-
-                    if (data && data.elements) break; // Success! Exit server loop
-
-                    // Try next server
-                    if (serverIndex < OVERPASS_SERVERS.length - 1) {
-                        updateLoading('Switching servers...', 'Trying backup server');
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                    }
                 }
 
-                // If all servers failed, use cached data as fallback
-                if (!data || !data.elements) {
-                    if (cachedData && cachedData.osmData) {
-                        const cacheAgeHours = Math.round((Date.now() - cachedData.timestamp) / (1000 * 60 * 60));
-                        const cacheAgeDisplay = cacheAgeHours < 24 ? `${cacheAgeHours}h ago` : `${Math.round(cacheAgeHours/24)}d ago`;
+                // ========================================
+                // STEP 3: Fetch from Overpass API
+                // ========================================
+                const apiData = await fetchFromOverpassAPI(j, west, south, east, north);
 
-                        updateLoading('Using cached data...', `Fresh data unavailable. Using cache from ${cacheAgeDisplay}`);
-                        await new Promise(resolve => setTimeout(resolve, 1500)); // Show message briefly
+                if (apiData && apiData.elements && apiData.elements.length > 0) {
+                    // API success!
+                    currentDataSource = 'api';
+                    updateLoading('Processing roads...', `${apiData.elements.length} segments received`);
+                    await processRoadDataAsync(apiData);
 
-                        await processRoadDataAsync(cachedData.osmData);
-                        updateStats();
-                        updateRoadTable();
-                        displayAllSegmentsSummary();
-                        hideLoading();
+                    // Save to cache
+                    updateLoading('Saving to cache...', 'Storing for offline use');
+                    await saveRoadCache(currentJurisdiction, apiData);
 
-                        // Show warning banner
-                        showCacheWarning(cacheAgeDisplay);
-                        return;
-                    }
-
-                    // No cache, no data - show error
-                    throw new Error(`All servers failed. ${lastError?.message || 'Please try again later.'}`);
+                    finishLoading('api', new Date().toISOString());
+                    return;
                 }
 
-                // Process the fetched data
-                updateLoading('Processing roads...', `Analyzing ${data.elements.length} segments`);
-                await processRoadDataAsync(data);
+                // ========================================
+                // STEP 4: Fallback to stale data
+                // ========================================
+                if (fallbackData) {
+                    currentDataSource = 'stale';
+                    updateLoading('Using fallback data...', `API unavailable, using ${fallbackSource.type} from ${formatAge(fallbackSource.timestamp)}`);
+                    await new Promise(resolve => setTimeout(resolve, 1500));
 
-                // Save to cache
-                updateLoading('Saving to cache...', 'Storing for offline use');
-                await saveRoadCache(currentJurisdiction, data);
+                    await processRoadDataAsync(fallbackData);
+                    finishLoading('stale', fallbackSource.timestamp, fallbackSource.type);
+                    return;
+                }
 
-                updateStats();
-                updateRoadTable();
-                displayAllSegmentsSummary();
-                hideLoading();
-
-                // Remove any previous warning
-                hideCacheWarning();
+                // No data available at all
+                throw new Error('No data available. Please try again later.');
 
             } catch (error) {
                 console.error('Error:', error);
@@ -1680,10 +1724,82 @@
             }
         }
 
+        // Fetch from Overpass API with fallback servers
+        async function fetchFromOverpassAPI(j, west, south, east, north) {
+            const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
+                'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
+
+            const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
+            const query = `[out:json][timeout:120];(${wayQueries});out body geom;`;
+
+            let lastError = null;
+
+            for (let serverIndex = 0; serverIndex < OVERPASS_SERVERS.length; serverIndex++) {
+                const server = OVERPASS_SERVERS[serverIndex];
+                const serverName = new URL(server).hostname.split('.')[0];
+
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                    try {
+                        updateLoading(
+                            `Fetching road data...`,
+                            `Server: ${serverName} (attempt ${attempt}/2)`
+                        );
+
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 90000);
+
+                        const response = await fetch(server, {
+                            method: 'POST',
+                            body: `data=${encodeURIComponent(query)}`,
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            signal: controller.signal
+                        });
+
+                        clearTimeout(timeoutId);
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+
+                        const data = await response.json();
+
+                        if (data && data.elements) {
+                            return data;
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        console.warn(`Overpass ${serverName} attempt ${attempt} failed:`, error.message);
+
+                        if (attempt < 2) {
+                            const waitTime = attempt * 2000;
+                            updateLoading('Retrying...', `Waiting ${waitTime/1000}s before retry`);
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                        }
+                    }
+                }
+
+                if (serverIndex < OVERPASS_SERVERS.length - 1) {
+                    updateLoading('Switching servers...', 'Trying backup server');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+
+            console.error('All Overpass servers failed:', lastError?.message);
+            return null;
+        }
+
+        // Finish loading and show data source
+        function finishLoading(source, timestamp, fallbackType = null) {
+            updateStats();
+            updateRoadTable();
+            displayAllSegmentsSummary();
+            hideLoading();
+            showDataSourceBadge(source, timestamp, fallbackType);
+        }
+
         // Async wrapper for processRoadData to prevent UI blocking
         async function processRoadDataAsync(data) {
             return new Promise(resolve => {
-                // Use requestAnimationFrame to allow UI updates
                 requestAnimationFrame(() => {
                     processRoadData(data);
                     resolve();
@@ -1691,22 +1807,20 @@
             });
         }
 
-        // Show warning banner when using cached data
-        function showCacheWarning(cacheAge) {
-            let banner = document.getElementById('cacheWarningBanner');
-            if (!banner) {
-                banner = document.createElement('div');
-                banner.id = 'cacheWarningBanner';
-                banner.style.cssText = `
+        // Show data source badge
+        function showDataSourceBadge(source, timestamp, fallbackType = null) {
+            let badge = document.getElementById('dataSourceBadge');
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'dataSourceBadge';
+                badge.style.cssText = `
                     position: fixed;
                     top: 57px;
                     left: 50%;
                     transform: translateX(-50%);
-                    background: linear-gradient(135deg, #f59e0b, #d97706);
-                    color: #000;
-                    padding: 0.5rem 1rem;
+                    padding: 0.4rem 0.8rem;
                     border-radius: 0 0 8px 8px;
-                    font-size: 0.75rem;
+                    font-size: 0.7rem;
                     font-weight: 600;
                     z-index: 1001;
                     display: flex;
@@ -1714,22 +1828,45 @@
                     gap: 0.5rem;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                 `;
-                document.body.appendChild(banner);
+                document.body.appendChild(badge);
             }
-            banner.innerHTML = `
-                <span>⚠️ Showing cached data from ${cacheAge}</span>
-                <button onclick="refreshRoadData()" style="background: #000; color: #fff; border: none; padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.625rem;">Retry</button>
-                <button onclick="hideCacheWarning()" style="background: transparent; border: none; color: #000; cursor: pointer; font-size: 1rem; padding: 0;">×</button>
+
+            const configs = {
+                cache: { icon: '📦', label: 'Cached', bg: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff' },
+                static: { icon: '📁', label: 'Pre-loaded', bg: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff' },
+                api: { icon: '🌐', label: 'Live data', bg: 'linear-gradient(135deg, #06b6d4, #0891b2)', color: '#fff' },
+                stale: { icon: '⚠️', label: `Stale ${fallbackType || 'data'}`, bg: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' }
+            };
+
+            const config = configs[source] || configs.api;
+            badge.style.background = config.bg;
+            badge.style.color = config.color;
+
+            const dateStr = formatAge(timestamp);
+            badge.innerHTML = `
+                <span>${config.icon} ${config.label}</span>
+                <span style="opacity: 0.8; font-weight: 400;">${dateStr}</span>
+                ${source === 'stale' ? `<button onclick="refreshRoadData()" style="background: #000; color: #fff; border: none; padding: 0.2rem 0.4rem; border-radius: 4px; cursor: pointer; font-size: 0.6rem; margin-left: 0.25rem;">Refresh</button>` : ''}
+                <button onclick="hideDataSourceBadge()" style="background: transparent; border: none; color: ${config.color}; cursor: pointer; font-size: 0.9rem; padding: 0; opacity: 0.7;">×</button>
             `;
-            banner.style.display = 'flex';
+            badge.style.display = 'flex';
+        }
+
+        function hideDataSourceBadge() {
+            const badge = document.getElementById('dataSourceBadge');
+            if (badge) badge.style.display = 'none';
+        }
+
+        // Show warning banner when using cached data (legacy - now using badge)
+        function showCacheWarning(cacheAge) {
+            showDataSourceBadge('stale', Date.now() - (parseInt(cacheAge) * 60 * 60 * 1000), 'cache');
         }
 
         function hideCacheWarning() {
-            const banner = document.getElementById('cacheWarningBanner');
-            if (banner) banner.style.display = 'none';
+            hideDataSourceBadge();
         }
 
-        // Force refresh from OSM
+        // Force refresh from OSM (bypasses cache and static)
         function refreshRoadData() {
             loadRoadData(true);
         }
