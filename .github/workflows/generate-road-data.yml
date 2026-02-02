@@ -8,12 +8,25 @@ on:
   # Manual: Click "Run workflow" button in GitHub Actions tab
   workflow_dispatch:
     inputs:
-      jurisdictions:
-        description: 'Specific jurisdictions to generate (comma-separated, e.g., "henrico,fairfax"). Leave empty for all.'
-        required: false
-        default: ''
-      batch:
-        description: 'Batch number (1-9) for partial runs. Leave empty for all.'
+      scope:
+        description: 'What to generate'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - batch_1
+          - batch_2
+          - batch_3
+          - batch_4
+          - batch_5
+          - batch_6
+          - batch_7
+          - batch_8
+          - batch_9
+          - custom
+      custom_jurisdictions:
+        description: 'If scope=custom, enter jurisdictions (comma-separated, e.g., "henrico,fairfax")'
         required: false
         default: ''
 
@@ -40,10 +53,10 @@ jobs:
       - name: Generate road data
         run: |
           # Determine which jurisdictions to process
-          INPUT_JURISDICTIONS="${{ github.event.inputs.jurisdictions }}"
-          INPUT_BATCH="${{ github.event.inputs.batch }}"
+          SCOPE="${{ github.event.inputs.scope }}"
+          CUSTOM="${{ github.event.inputs.custom_jurisdictions }}"
 
-          # All Virginia jurisdictions grouped into 9 batches
+          # All Virginia jurisdictions grouped into 9 batches (~15 each)
           BATCH_1="accomack albemarle alleghany amelia amherst appomattox arlington augusta bath bedford_county bland botetourt brunswick buchanan buckingham"
           BATCH_2="campbell caroline carroll charles_city charlotte chesterfield clarke craig culpeper cumberland dickenson dinwiddie essex fairfax fauquier"
           BATCH_3="floyd fluvanna franklin_county frederick giles gloucester goochland grayson greene greensville halifax hanover henrico henry highland"
@@ -54,30 +67,43 @@ jobs:
           BATCH_8="fairfax_city falls_church franklin_city fredericksburg galax hampton harrisonburg hopewell lexington lynchburg manassas manassas_park martinsville newport_news"
           BATCH_9="norfolk norton petersburg poquoson portsmouth radford richmond_city roanoke_city salem staunton suffolk virginia_beach waynesboro williamsburg winchester"
 
-          if [ -n "$INPUT_JURISDICTIONS" ]; then
-            # Process specific jurisdictions provided by user
-            JURISDICTIONS=$(echo "$INPUT_JURISDICTIONS" | tr ',' ' ')
-            echo "Processing user-specified jurisdictions: $JURISDICTIONS"
-          elif [ -n "$INPUT_BATCH" ]; then
-            # Process specific batch
-            case $INPUT_BATCH in
-              1) JURISDICTIONS="$BATCH_1" ;;
-              2) JURISDICTIONS="$BATCH_2" ;;
-              3) JURISDICTIONS="$BATCH_3" ;;
-              4) JURISDICTIONS="$BATCH_4" ;;
-              5) JURISDICTIONS="$BATCH_5" ;;
-              6) JURISDICTIONS="$BATCH_6" ;;
-              7) JURISDICTIONS="$BATCH_7" ;;
-              8) JURISDICTIONS="$BATCH_8" ;;
-              9) JURISDICTIONS="$BATCH_9" ;;
-              *) echo "Invalid batch number"; exit 1 ;;
-            esac
-            echo "Processing batch $INPUT_BATCH: $JURISDICTIONS"
-          else
-            # Process all jurisdictions (scheduled run)
-            JURISDICTIONS="$BATCH_1 $BATCH_2 $BATCH_3 $BATCH_4 $BATCH_5 $BATCH_6 $BATCH_7 $BATCH_8 $BATCH_9"
-            echo "Processing ALL jurisdictions"
-          fi
+          ALL_JURISDICTIONS="$BATCH_1 $BATCH_2 $BATCH_3 $BATCH_4 $BATCH_5 $BATCH_6 $BATCH_7 $BATCH_8 $BATCH_9"
+
+          # Select jurisdictions based on scope
+          case "$SCOPE" in
+            all|"")
+              JURISDICTIONS="$ALL_JURISDICTIONS"
+              echo "🌍 Processing ALL 133 jurisdictions"
+              ;;
+            batch_1) JURISDICTIONS="$BATCH_1"; echo "📦 Processing Batch 1 (15 jurisdictions)" ;;
+            batch_2) JURISDICTIONS="$BATCH_2"; echo "📦 Processing Batch 2 (15 jurisdictions)" ;;
+            batch_3) JURISDICTIONS="$BATCH_3"; echo "📦 Processing Batch 3 (15 jurisdictions)" ;;
+            batch_4) JURISDICTIONS="$BATCH_4"; echo "📦 Processing Batch 4 (15 jurisdictions)" ;;
+            batch_5) JURISDICTIONS="$BATCH_5"; echo "📦 Processing Batch 5 (15 jurisdictions)" ;;
+            batch_6) JURISDICTIONS="$BATCH_6"; echo "📦 Processing Batch 6 (15 jurisdictions)" ;;
+            batch_7) JURISDICTIONS="$BATCH_7"; echo "📦 Processing Batch 7 (15 jurisdictions)" ;;
+            batch_8) JURISDICTIONS="$BATCH_8"; echo "📦 Processing Batch 8 (15 jurisdictions)" ;;
+            batch_9) JURISDICTIONS="$BATCH_9"; echo "📦 Processing Batch 9 (15 jurisdictions)" ;;
+            custom)
+              if [ -z "$CUSTOM" ]; then
+                echo "❌ Error: custom scope requires custom_jurisdictions input"
+                exit 1
+              fi
+              JURISDICTIONS=$(echo "$CUSTOM" | tr ',' ' ')
+              echo "🎯 Processing custom jurisdictions: $JURISDICTIONS"
+              ;;
+            *)
+              echo "❌ Unknown scope: $SCOPE"
+              exit 1
+              ;;
+          esac
+
+          echo ""
+          echo "Jurisdictions to process:"
+          echo "$JURISDICTIONS" | tr ' ' '\n' | head -20
+          TOTAL=$(echo "$JURISDICTIONS" | wc -w)
+          echo "... Total: $TOTAL jurisdictions"
+          echo ""
 
           # Run the generator script
           node scripts/generate-road-data.js $JURISDICTIONS
