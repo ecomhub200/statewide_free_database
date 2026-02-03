@@ -165,7 +165,16 @@
         }
         
         .btn-secondary:hover { background: var(--border-color); }
-        
+
+        .cache-info {
+            font-size: 0.7rem;
+            color: var(--accent-color);
+            padding: 0.25rem 0.5rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 4px;
+            margin-left: 0.5rem;
+        }
+
         .main-container {
             display: grid;
             grid-template-columns: 300px 1fr 340px;
@@ -839,6 +848,15 @@
                     </svg>
                     Load Roads
                 </button>
+                <button class="btn btn-secondary" onclick="refreshData()" title="Force refresh from API (ignore cache)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <polyline points="1 20 1 14 7 14"/>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                    </svg>
+                    Refresh
+                </button>
+                <span id="cacheInfo" class="cache-info" style="display: none;"></span>
             </div>
         </div>
     </header>
@@ -1229,28 +1247,42 @@
         // =====================================================
         function initMap() {
             map = L.map('map', { center: [37.54, -78.5], zoom: 7, zoomControl: false });
-            
+
             // Set default basemap
             currentBasemap = L.tileLayer(BASEMAPS['osm'].url, BASEMAPS['osm'].options).addTo(map);
-            
+
             L.control.zoom({ position: 'bottomright' }).addTo(map);
-            
+
             map.on('mousemove', e => {
                 document.getElementById('mapCoords').textContent = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
             });
             map.on('zoomend', () => {
                 document.getElementById('mapZoom').textContent = `Zoom: ${map.getZoom()}`;
             });
-            
+
             // Close export menu when clicking outside
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.export-dropdown')) {
                     document.getElementById('exportMenu').classList.remove('show');
                 }
             });
-            
+
             populateJurisdictionSelect();
             initIndexedDB();
+
+            // Restore saved jurisdiction from localStorage
+            const savedJurisdiction = getJurisdictionFromStorage();
+            if (savedJurisdiction && JURISDICTIONS[savedJurisdiction]) {
+                const select = document.getElementById('jurisdictionSelect');
+                select.value = savedJurisdiction;
+
+                // Trigger the change to load the boundary and auto-load cached data
+                setTimeout(async () => {
+                    await onJurisdictionChange();
+                    // Auto-load cached data if available
+                    loadRoadData();
+                }, 100);
+            }
         }
         
         function changeBasemap() {
@@ -1335,10 +1367,16 @@
         async function onJurisdictionChange() {
             const key = document.getElementById('jurisdictionSelect').value;
             if (!key) return;
-            
+
             currentJurisdiction = key;
             const j = JURISDICTIONS[key];
-            
+
+            // Save to localStorage for persistence
+            saveJurisdictionToStorage(key);
+
+            // Hide cache info when changing jurisdiction
+            hideCacheInfo();
+
             // Update UI
             document.getElementById('mapJurisdiction').textContent = j.name;
             
@@ -1384,48 +1422,88 @@
         // =====================================================
         // ROAD DATA LOADING
         // =====================================================
-        async function loadRoadData() {
+        async function loadRoadData(forceRefresh = false) {
             if (!currentJurisdiction) {
                 alert('Please select a jurisdiction first');
                 return;
             }
-            
+
             const j = JURISDICTIONS[currentJurisdiction];
             const [west, south, east, north] = j.bbox;
-            
+
             document.getElementById('loadBtn').disabled = true;
+
+            // Check IndexedDB cache first (unless force refresh)
+            if (!forceRefresh) {
+                showLoading(`Loading ${j.name}...`, 'Checking local cache');
+                const cachedData = await loadFromIndexedDB(currentJurisdiction);
+
+                if (cachedData && cachedData.roadsData && cachedData.roadsData.length > 0) {
+                    clearRoads();
+
+                    // Restore boundary if available
+                    if (cachedData.boundaryGeoJson) {
+                        boundaryGeoJson = cachedData.boundaryGeoJson;
+                    }
+
+                    // Restore road data
+                    roadsData = cachedData.roadsData;
+                    allGeoJson = cachedData.geoJson;
+
+                    updateLoading('Rendering cached roads...', `${roadsData.length} segments from local storage`);
+
+                    // Add roads to map
+                    roadsData.forEach(road => addRoadToMap(road));
+
+                    updateStats();
+                    updateRoadTable();
+
+                    // Show cache info
+                    const savedDate = new Date(cachedData.savedAt).toLocaleDateString();
+                    showCacheInfo(`Loaded from cache (saved ${savedDate})`);
+
+                    hideLoading();
+                    document.getElementById('loadBtn').disabled = false;
+                    return;
+                }
+            }
+
             showLoading(`Loading ${j.name}...`, 'Querying Overpass API');
-            
+
             try {
                 clearRoads();
-                
+
                 const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
                     'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
-                
+
                 const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
-                
+
                 const query = `[out:json][timeout:180];(${wayQueries});out body geom;`;
-                
+
                 updateLoading('Fetching road geometries...', 'This may take 30-90 seconds');
-                
+
                 const response = await fetch('https://overpass-api.de/api/interpreter', {
                     method: 'POST',
                     body: `data=${encodeURIComponent(query)}`,
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
-                
+
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
+
                 const data = await response.json();
-                
+
                 updateLoading('Processing & filtering...', `${data.elements?.length || 0} segments found, filtering to boundary`);
-                
+
                 processRoadData(data);
                 updateStats();
                 updateRoadTable();
-                
+
+                // Auto-save to IndexedDB
+                await autoSaveToIndexedDB();
+                showCacheInfo('Loaded from API (saved to cache)');
+
                 hideLoading();
-                
+
             } catch (error) {
                 console.error('Error:', error);
                 updateLoading('Error', error.message);
@@ -1689,6 +1767,7 @@
             boundaryGeoJson = null;
             updateStats();
             updateRoadTable();
+            hideCacheInfo();
             document.getElementById('roadDetails').innerHTML = `<div class="no-selection"><div class="no-selection-icon">🛣️</div><p>Select a jurisdiction and load roads.</p></div>`;
         }
         
@@ -1879,7 +1958,7 @@
                 const db = await openDB();
                 const tx = db.transaction(STORE_NAME, 'readonly');
                 const store = tx.objectStore(STORE_NAME);
-                
+
                 return new Promise((resolve, reject) => {
                     const request = store.get(jurisdictionKey);
                     request.onsuccess = () => resolve(request.result);
@@ -1890,7 +1969,78 @@
                 return null;
             }
         }
-        
+
+        async function autoSaveToIndexedDB() {
+            if (!currentJurisdiction || !allGeoJson?.features?.length) {
+                return;
+            }
+
+            const j = JURISDICTIONS[currentJurisdiction];
+
+            const record = {
+                id: currentJurisdiction,
+                jurisdiction: currentJurisdiction,
+                name: j.name,
+                savedAt: new Date().toISOString(),
+                roadsData: roadsData,
+                geoJson: allGeoJson,
+                boundaryGeoJson: boundaryGeoJson
+            };
+
+            try {
+                const db = await openDB();
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+
+                await new Promise((resolve, reject) => {
+                    const request = store.put(record);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+
+                console.log(`Auto-saved ${j.name} road data to IndexedDB`);
+            } catch (error) {
+                console.error('Auto-save error:', error);
+            }
+        }
+
+        function showCacheInfo(message) {
+            const infoEl = document.getElementById('cacheInfo');
+            if (infoEl) {
+                infoEl.textContent = message;
+                infoEl.style.display = 'block';
+            }
+        }
+
+        function hideCacheInfo() {
+            const infoEl = document.getElementById('cacheInfo');
+            if (infoEl) {
+                infoEl.style.display = 'none';
+            }
+        }
+
+        function refreshData() {
+            loadRoadData(true);
+        }
+
+        // localStorage functions for jurisdiction persistence
+        function saveJurisdictionToStorage(jurisdictionKey) {
+            try {
+                localStorage.setItem('crashlens_jurisdiction', jurisdictionKey);
+            } catch (e) {
+                console.warn('Could not save jurisdiction to localStorage:', e);
+            }
+        }
+
+        function getJurisdictionFromStorage() {
+            try {
+                return localStorage.getItem('crashlens_jurisdiction');
+            } catch (e) {
+                console.warn('Could not read jurisdiction from localStorage:', e);
+                return null;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', initMap);
     </script>
 </body>
