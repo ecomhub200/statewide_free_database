@@ -382,7 +382,35 @@
             background: var(--bg-tertiary);
             border-color: var(--accent-blue);
         }
-        
+
+        .map-control-btn.active {
+            background: var(--accent-blue);
+            border-color: var(--accent-cyan);
+            color: white;
+        }
+
+        .map-controls-separator {
+            width: 24px;
+            height: 1px;
+            background: var(--border-color);
+            margin: 0.25rem auto;
+        }
+
+        .drawing-tooltip {
+            position: absolute;
+            z-index: 1001;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.625rem;
+            color: var(--accent-cyan);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
         .map-info-overlay {
             position: absolute;
             bottom: 0.5rem;
@@ -977,6 +1005,25 @@
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                     </svg>
                 </button>
+                <div class="map-controls-separator"></div>
+                <button class="map-control-btn" id="polygonToolBtn" onclick="activateTool('polygon')" title="Draw Polygon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12,2 22,8.5 18,21 6,21 2,8.5"/>
+                    </svg>
+                </button>
+                <button class="map-control-btn" id="circleToolBtn" onclick="activateTool('circle')" title="Draw Circle">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                </button>
+                <button class="map-control-btn" id="measureToolBtn" onclick="activateTool('measure')" title="Measure Distance">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 12h20"/>
+                        <path d="M6 8v8"/>
+                        <path d="M12 6v12"/>
+                        <path d="M18 8v8"/>
+                    </svg>
+                </button>
             </div>
             
             <div class="map-info-overlay">
@@ -1198,7 +1245,17 @@
         let currentJurisdiction = null, selectedRoad = null, activeFilter = null, layersVisible = true;
         let boundaryGeoJson = null; // Store the TIGER boundary polygon for filtering
         let currentBasemap = null;
-        
+
+        // Drawing tools state
+        let currentDrawingTool = null;
+        let drawnShapes = [];
+        let tempDrawingPoints = [];
+        let tempDrawingLayer = null;
+        let tempMarkersLayer = null;
+        let drawingTooltip = null;
+        let circleStartPoint = null;
+        let tempCircle = null;
+
         // Basemap tile layers
         const BASEMAPS = {
             'carto-dark': {
@@ -1691,7 +1748,365 @@
             updateRoadTable();
             document.getElementById('roadDetails').innerHTML = `<div class="no-selection"><div class="no-selection-icon">🛣️</div><p>Select a jurisdiction and load roads.</p></div>`;
         }
-        
+
+        // =====================================================
+        // DRAWING TOOLS
+        // =====================================================
+        function activateTool(tool) {
+            // If clicking the same tool, deactivate it
+            if (currentDrawingTool === tool) {
+                deactivateTool();
+                return;
+            }
+
+            // Deactivate any current tool first
+            deactivateTool();
+
+            // Activate new tool
+            currentDrawingTool = tool;
+            document.getElementById(`${tool}ToolBtn`).classList.add('active');
+            map.getContainer().style.cursor = 'crosshair';
+
+            // Set up event listeners based on tool
+            if (tool === 'polygon') {
+                map.on('click', onPolygonClick);
+                map.on('dblclick', onPolygonDoubleClick);
+                map.on('mousemove', onPolygonMouseMove);
+            } else if (tool === 'circle') {
+                map.on('mousedown', onCircleMouseDown);
+            } else if (tool === 'measure') {
+                map.on('click', onMeasureClick);
+                map.on('mousemove', onMeasureMouseMove);
+                map.on('dblclick', onMeasureDoubleClick);
+            }
+        }
+
+        function deactivateTool() {
+            if (!currentDrawingTool) return;
+
+            // Remove active class from button
+            const btn = document.getElementById(`${currentDrawingTool}ToolBtn`);
+            if (btn) btn.classList.remove('active');
+
+            // Remove event listeners
+            map.off('click', onPolygonClick);
+            map.off('dblclick', onPolygonDoubleClick);
+            map.off('mousemove', onPolygonMouseMove);
+            map.off('mousedown', onCircleMouseDown);
+            map.off('mousemove', onCircleMouseMove);
+            map.off('mouseup', onCircleMouseUp);
+            map.off('click', onMeasureClick);
+            map.off('mousemove', onMeasureMouseMove);
+            map.off('dblclick', onMeasureDoubleClick);
+
+            // Clean up temporary drawing elements
+            cleanupTempDrawing();
+
+            // Reset cursor
+            map.getContainer().style.cursor = '';
+            currentDrawingTool = null;
+        }
+
+        function cleanupTempDrawing() {
+            if (tempDrawingLayer) {
+                map.removeLayer(tempDrawingLayer);
+                tempDrawingLayer = null;
+            }
+            if (tempMarkersLayer) {
+                map.removeLayer(tempMarkersLayer);
+                tempMarkersLayer = null;
+            }
+            if (tempCircle) {
+                map.removeLayer(tempCircle);
+                tempCircle = null;
+            }
+            if (drawingTooltip) {
+                drawingTooltip.remove();
+                drawingTooltip = null;
+            }
+            tempDrawingPoints = [];
+            circleStartPoint = null;
+        }
+
+        function createTooltip(content, latlng) {
+            if (drawingTooltip) {
+                drawingTooltip.setLatLng(latlng);
+                drawingTooltip.setContent(content);
+            } else {
+                drawingTooltip = L.tooltip({
+                    permanent: true,
+                    direction: 'right',
+                    className: 'drawing-tooltip',
+                    offset: [10, 0]
+                }).setLatLng(latlng).setContent(content).addTo(map);
+            }
+        }
+
+        // Polygon drawing functions
+        function onPolygonClick(e) {
+            L.DomEvent.stopPropagation(e);
+            tempDrawingPoints.push(e.latlng);
+
+            // Create or update the polygon preview
+            updatePolygonPreview();
+
+            // Add vertex marker
+            if (!tempMarkersLayer) {
+                tempMarkersLayer = L.layerGroup().addTo(map);
+            }
+            L.circleMarker(e.latlng, {
+                radius: 5,
+                color: '#3b82f6',
+                fillColor: '#3b82f6',
+                fillOpacity: 1
+            }).addTo(tempMarkersLayer);
+        }
+
+        function onPolygonDoubleClick(e) {
+            L.DomEvent.stopPropagation(e);
+            map.doubleClickZoom.disable();
+
+            if (tempDrawingPoints.length >= 3) {
+                // Create final polygon
+                const polygon = L.polygon(tempDrawingPoints, {
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.3,
+                    weight: 2
+                }).addTo(map);
+
+                // Calculate area using Turf.js
+                const coords = tempDrawingPoints.map(p => [p.lng, p.lat]);
+                coords.push(coords[0]); // Close the polygon
+                const turfPolygon = turf.polygon([coords]);
+                const area = turf.area(turfPolygon);
+                const areaText = area > 1000000
+                    ? (area / 1000000).toFixed(2) + ' km²'
+                    : area.toFixed(0) + ' m²';
+
+                polygon.bindPopup(`<strong>Polygon</strong><br>Area: ${areaText}`).openPopup();
+                drawnShapes.push(polygon);
+            }
+
+            cleanupTempDrawing();
+            setTimeout(() => map.doubleClickZoom.enable(), 100);
+        }
+
+        function onPolygonMouseMove(e) {
+            if (tempDrawingPoints.length > 0) {
+                const points = [...tempDrawingPoints, e.latlng];
+                if (tempDrawingLayer) {
+                    tempDrawingLayer.setLatLngs(points);
+                }
+
+                // Show area preview if we have at least 3 points
+                if (points.length >= 3) {
+                    const coords = points.map(p => [p.lng, p.lat]);
+                    coords.push(coords[0]);
+                    const turfPolygon = turf.polygon([coords]);
+                    const area = turf.area(turfPolygon);
+                    const areaText = area > 1000000
+                        ? (area / 1000000).toFixed(2) + ' km²'
+                        : area.toFixed(0) + ' m²';
+                    createTooltip(areaText, e.latlng);
+                }
+            }
+        }
+
+        function updatePolygonPreview() {
+            if (tempDrawingPoints.length < 2) return;
+
+            if (tempDrawingLayer) {
+                tempDrawingLayer.setLatLngs(tempDrawingPoints);
+            } else {
+                tempDrawingLayer = L.polygon(tempDrawingPoints, {
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.2,
+                    weight: 2,
+                    dashArray: '5, 5'
+                }).addTo(map);
+            }
+        }
+
+        // Circle drawing functions
+        function onCircleMouseDown(e) {
+            L.DomEvent.stopPropagation(e);
+            circleStartPoint = e.latlng;
+            map.dragging.disable();
+            map.on('mousemove', onCircleMouseMove);
+            map.on('mouseup', onCircleMouseUp);
+        }
+
+        function onCircleMouseMove(e) {
+            if (!circleStartPoint) return;
+
+            const radius = circleStartPoint.distanceTo(e.latlng);
+
+            if (tempCircle) {
+                tempCircle.setRadius(radius);
+            } else {
+                tempCircle = L.circle(circleStartPoint, {
+                    radius: radius,
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.2,
+                    weight: 2,
+                    dashArray: '5, 5'
+                }).addTo(map);
+            }
+
+            // Show radius in tooltip
+            const radiusText = radius > 1000
+                ? (radius / 1000).toFixed(2) + ' km'
+                : radius.toFixed(0) + ' m';
+            createTooltip(`Radius: ${radiusText}`, e.latlng);
+        }
+
+        function onCircleMouseUp(e) {
+            if (!circleStartPoint) return;
+
+            map.off('mousemove', onCircleMouseMove);
+            map.off('mouseup', onCircleMouseUp);
+            map.dragging.enable();
+
+            const radius = circleStartPoint.distanceTo(e.latlng);
+
+            if (radius > 10) { // Minimum radius to create circle
+                const circle = L.circle(circleStartPoint, {
+                    radius: radius,
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.3,
+                    weight: 2
+                }).addTo(map);
+
+                // Calculate area
+                const area = Math.PI * radius * radius;
+                const areaText = area > 1000000
+                    ? (area / 1000000).toFixed(2) + ' km²'
+                    : area.toFixed(0) + ' m²';
+                const radiusText = radius > 1000
+                    ? (radius / 1000).toFixed(2) + ' km'
+                    : radius.toFixed(0) + ' m';
+
+                circle.bindPopup(`<strong>Circle</strong><br>Radius: ${radiusText}<br>Area: ${areaText}`).openPopup();
+                drawnShapes.push(circle);
+            }
+
+            // Cleanup
+            if (tempCircle) {
+                map.removeLayer(tempCircle);
+                tempCircle = null;
+            }
+            if (drawingTooltip) {
+                drawingTooltip.remove();
+                drawingTooltip = null;
+            }
+            circleStartPoint = null;
+        }
+
+        // Measure tool functions
+        function onMeasureClick(e) {
+            L.DomEvent.stopPropagation(e);
+            tempDrawingPoints.push(e.latlng);
+
+            // Add vertex marker
+            if (!tempMarkersLayer) {
+                tempMarkersLayer = L.layerGroup().addTo(map);
+            }
+            L.circleMarker(e.latlng, {
+                radius: 5,
+                color: '#06b6d4',
+                fillColor: '#06b6d4',
+                fillOpacity: 1
+            }).addTo(tempMarkersLayer);
+
+            // Update line
+            updateMeasureLine();
+        }
+
+        function onMeasureMouseMove(e) {
+            if (tempDrawingPoints.length > 0) {
+                const points = [...tempDrawingPoints, e.latlng];
+                if (tempDrawingLayer) {
+                    tempDrawingLayer.setLatLngs(points);
+                }
+
+                // Calculate total distance
+                const distance = calculateTotalDistance(points);
+                const distanceText = distance > 1000
+                    ? (distance / 1000).toFixed(2) + ' km'
+                    : distance.toFixed(0) + ' m';
+                createTooltip(distanceText, e.latlng);
+            }
+        }
+
+        function onMeasureDoubleClick(e) {
+            L.DomEvent.stopPropagation(e);
+            map.doubleClickZoom.disable();
+
+            if (tempDrawingPoints.length >= 2) {
+                // Create final measurement line
+                const line = L.polyline(tempDrawingPoints, {
+                    color: '#06b6d4',
+                    weight: 3
+                }).addTo(map);
+
+                // Calculate total distance
+                const distance = calculateTotalDistance(tempDrawingPoints);
+                const distanceText = distance > 1000
+                    ? (distance / 1000).toFixed(2) + ' km'
+                    : distance.toFixed(0) + ' m';
+
+                line.bindPopup(`<strong>Distance</strong><br>${distanceText}`).openPopup();
+                drawnShapes.push(line);
+
+                // Keep markers for reference
+                if (tempMarkersLayer) {
+                    drawnShapes.push(tempMarkersLayer);
+                    tempMarkersLayer = null;
+                }
+            }
+
+            cleanupTempDrawing();
+            setTimeout(() => map.doubleClickZoom.enable(), 100);
+        }
+
+        function updateMeasureLine() {
+            if (tempDrawingPoints.length < 2) return;
+
+            if (tempDrawingLayer) {
+                tempDrawingLayer.setLatLngs(tempDrawingPoints);
+            } else {
+                tempDrawingLayer = L.polyline(tempDrawingPoints, {
+                    color: '#06b6d4',
+                    weight: 2,
+                    dashArray: '5, 5'
+                }).addTo(map);
+            }
+        }
+
+        function calculateTotalDistance(points) {
+            let total = 0;
+            for (let i = 1; i < points.length; i++) {
+                const from = turf.point([points[i-1].lng, points[i-1].lat]);
+                const to = turf.point([points[i].lng, points[i].lat]);
+                total += turf.distance(from, to, { units: 'meters' });
+            }
+            return total;
+        }
+
+        function clearDrawings() {
+            drawnShapes.forEach(shape => {
+                if (shape && map.hasLayer(shape)) {
+                    map.removeLayer(shape);
+                }
+            });
+            drawnShapes = [];
+            cleanupTempDrawing();
+        }
+
         // =====================================================
         // EXPORT FUNCTIONS
         // =====================================================
