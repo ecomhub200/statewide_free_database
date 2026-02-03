@@ -689,7 +689,7 @@
         <aside class="sidebar-left">
             <div class="info-banner" id="infoBanner">
                 <h3>🗺️ TIGERweb + OSM Data</h3>
-                <p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data from OpenStreetMap with accurate geometry.</p>
+                <p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data from OpenStreetMap clipped to the exact boundary.</p>
             </div>
             
             <div class="boundary-info" id="boundaryInfo" style="display:none;">
@@ -858,7 +858,8 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
     <script>
         // =====================================================
         // VIRGINIA JURISDICTIONS - ALL 133 Counties & Cities
@@ -1034,6 +1035,7 @@
         // State
         let map, boundaryLayer, roadLayers = {}, roadsData = [], allGeoJson = null;
         let currentJurisdiction = null, selectedRoad = null, activeFilter = null, layersVisible = true;
+        let boundaryPolygon = null; // Store TIGER boundary polygon for clipping
         
         // =====================================================
         // INITIALIZATION
@@ -1143,6 +1145,9 @@
             if (boundaryLayer) map.removeLayer(boundaryLayer);
             
             if (geoJson && geoJson.features && geoJson.features.length > 0) {
+                // Store boundary polygon for road clipping
+                boundaryPolygon = geoJson.features[0];
+
                 boundaryLayer = L.geoJSON(geoJson, {
                     style: {
                         color: '#3b82f6',
@@ -1152,7 +1157,7 @@
                         dashArray: '8, 4'
                     }
                 }).addTo(map);
-                
+
                 // Calculate area
                 const feature = geoJson.features[0];
                 if (feature.properties) {
@@ -1162,11 +1167,12 @@
                         document.getElementById('areaDisplay').textContent = `${sqMiles} sq mi`;
                     }
                 }
-                
+
                 map.fitBounds(boundaryLayer.getBounds(), { padding: [20, 20] });
             } else {
-                // Fallback to bbox rectangle
+                // Fallback to bbox rectangle - create a polygon from bbox for clipping
                 const [west, south, east, north] = j.bbox;
+                boundaryPolygon = turf.bboxPolygon([west, south, east, north]);
                 boundaryLayer = L.rectangle([[south, west], [north, east]], {
                     color: '#3b82f6', weight: 2, fill: false, dashArray: '5, 5'
                 }).addTo(map);
@@ -1213,7 +1219,7 @@
                 
                 const data = await response.json();
                 
-                updateLoading('Processing...', `${data.elements?.length || 0} segments found`);
+                updateLoading('Clipping to boundary...', `${data.elements?.length || 0} segments found, filtering to TIGER boundary`);
                 
                 processRoadData(data);
                 updateStats();
@@ -1222,7 +1228,7 @@
                 document.getElementById('infoBanner').classList.add('loaded');
                 document.getElementById('infoBanner').innerHTML = `
                     <h3>✓ ${j.name} Loaded</h3>
-                    <p>${roadsData.length.toLocaleString()} road segments loaded with TIGERweb boundary.</p>
+                    <p>${roadsData.length.toLocaleString()} road segments clipped to TIGER boundary.</p>
                 `;
                 
                 hideLoading();
@@ -1239,40 +1245,146 @@
             }
         }
         
+        // =====================================================
+        // ROAD CLIPPING TO TIGER BOUNDARY
+        // =====================================================
+        function clipRoadToBoundary(coords) {
+            // If no boundary polygon, return original coords
+            if (!boundaryPolygon) return [coords];
+
+            // Convert [lat, lon] coords to GeoJSON LineString [lon, lat]
+            const lineCoords = coords.map(c => [c[1], c[0]]);
+            const line = turf.lineString(lineCoords);
+
+            // Get the boundary polygon geometry
+            let polygon;
+            if (boundaryPolygon.type === 'Feature') {
+                polygon = boundaryPolygon;
+            } else {
+                polygon = turf.polygon(boundaryPolygon.geometry.coordinates);
+            }
+
+            // Try to clip the line to the polygon
+            try {
+                // Use lineSplit to split line at polygon boundary intersections
+                const clipped = turf.lineSplit(line, polygon);
+
+                if (!clipped || !clipped.features || clipped.features.length === 0) {
+                    // No intersection - check if line is entirely inside or outside
+                    const midPoint = turf.midpoint(turf.point(lineCoords[0]), turf.point(lineCoords[lineCoords.length - 1]));
+                    if (turf.booleanPointInPolygon(midPoint, polygon)) {
+                        // Line is entirely inside the polygon
+                        return [coords];
+                    } else {
+                        // Line is entirely outside
+                        return [];
+                    }
+                }
+
+                // Filter segments that are inside the boundary polygon
+                const insideSegments = [];
+                clipped.features.forEach(feature => {
+                    const segmentCoords = feature.geometry.coordinates;
+                    // Check if the midpoint of segment is inside the polygon
+                    const mid = turf.midpoint(
+                        turf.point(segmentCoords[0]),
+                        turf.point(segmentCoords[segmentCoords.length - 1])
+                    );
+                    if (turf.booleanPointInPolygon(mid, polygon)) {
+                        // Convert back to [lat, lon] format for Leaflet
+                        insideSegments.push(segmentCoords.map(c => [c[1], c[0]]));
+                    }
+                });
+
+                return insideSegments;
+            } catch (e) {
+                // If clipping fails, use point-in-polygon filtering as fallback
+                console.warn('Clipping failed, using fallback:', e.message);
+                return clipRoadByPoints(coords, polygon);
+            }
+        }
+
+        // Fallback: Filter road coordinates by checking each point
+        function clipRoadByPoints(coords, polygon) {
+            const segments = [];
+            let currentSegment = [];
+
+            for (let i = 0; i < coords.length; i++) {
+                const [lat, lon] = coords[i];
+                const point = turf.point([lon, lat]);
+                const isInside = turf.booleanPointInPolygon(point, polygon);
+
+                if (isInside) {
+                    currentSegment.push(coords[i]);
+                } else {
+                    // Point is outside, save current segment if it has length
+                    if (currentSegment.length >= 2) {
+                        segments.push([...currentSegment]);
+                    }
+                    currentSegment = [];
+                }
+            }
+
+            // Don't forget the last segment
+            if (currentSegment.length >= 2) {
+                segments.push(currentSegment);
+            }
+
+            return segments;
+        }
+
         function processRoadData(data) {
             if (!data.elements?.length) return;
-            
+
             allGeoJson = { type: 'FeatureCollection', features: [] };
-            
+            let clippedCount = 0;
+            let totalSegments = 0;
+
             data.elements.forEach(el => {
                 if (el.type !== 'way' || !el.geometry) return;
-                
+
                 const tags = el.tags || {};
                 const highway = tags.highway;
                 const funcClass = OSM_TO_VDOT[highway] || '7';
-                const coords = el.geometry.map(p => [p.lat, p.lon]);
-                const length = calcLength(coords);
-                
-                const road = {
-                    id: el.id,
-                    name: tags.name || tags.ref || `Unnamed ${highway}`,
-                    highway, funcClass,
-                    ref: tags.ref || '',
-                    lanes: tags.lanes || '',
-                    maxspeed: tags.maxspeed || '',
-                    surface: tags.surface || '',
-                    length, coords
-                };
-                
-                roadsData.push(road);
-                addRoadToMap(road);
-                
-                allGeoJson.features.push({
-                    type: 'Feature',
-                    properties: { osm_id: el.id, name: road.name, highway, funcClass, ref: road.ref, length_miles: length },
-                    geometry: { type: 'LineString', coordinates: coords.map(c => [c[1], c[0]]) }
+                const originalCoords = el.geometry.map(p => [p.lat, p.lon]);
+
+                // Clip road to TIGER boundary
+                const clippedSegments = clipRoadToBoundary(originalCoords);
+
+                if (clippedSegments.length === 0) {
+                    clippedCount++;
+                    return; // Road is entirely outside boundary
+                }
+
+                // Process each clipped segment
+                clippedSegments.forEach((coords, idx) => {
+                    totalSegments++;
+                    const length = calcLength(coords);
+
+                    const road = {
+                        id: clippedSegments.length > 1 ? `${el.id}_${idx}` : el.id,
+                        originalId: el.id,
+                        name: tags.name || tags.ref || `Unnamed ${highway}`,
+                        highway, funcClass,
+                        ref: tags.ref || '',
+                        lanes: tags.lanes || '',
+                        maxspeed: tags.maxspeed || '',
+                        surface: tags.surface || '',
+                        length, coords
+                    };
+
+                    roadsData.push(road);
+                    addRoadToMap(road);
+
+                    allGeoJson.features.push({
+                        type: 'Feature',
+                        properties: { osm_id: el.id, name: road.name, highway, funcClass, ref: road.ref, length_miles: length },
+                        geometry: { type: 'LineString', coordinates: coords.map(c => [c[1], c[0]]) }
+                    });
                 });
             });
+
+            console.log(`Clipping complete: ${clippedCount} roads filtered out, ${totalSegments} segments inside boundary`);
         }
         
         function calcLength(coords) {
@@ -1448,7 +1560,8 @@
             updateRoadTable();
             document.getElementById('roadDetails').innerHTML = `<div class="no-selection"><div class="no-selection-icon">🛣️</div><p>Select a jurisdiction and load roads.</p></div>`;
             document.getElementById('infoBanner').classList.remove('loaded');
-            document.getElementById('infoBanner').innerHTML = `<h3>🗺️ TIGERweb + OSM Data</h3><p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data.</p>`;
+            document.getElementById('infoBanner').innerHTML = `<h3>🗺️ TIGERweb + OSM Data</h3><p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data clipped to the boundary.</p>`;
+            // Note: Keep boundaryPolygon as it's tied to the selected jurisdiction
         }
         
         function exportData() {
