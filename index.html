@@ -750,6 +750,7 @@
             font-size: 0.8125rem;
             width: 200px;
             outline: none;
+            padding: 0.25rem 0;
         }
         
         .map-search-box input::placeholder {
@@ -844,14 +845,6 @@
 
     <div class="main-container">
         <aside class="sidebar-left">
-            <div class="search-box">
-                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                </svg>
-                <input type="text" class="search-input" placeholder="Search roads..." id="roadSearch" oninput="filterRoads()">
-            </div>
-            
             <div class="section-title">Statistics</div>
             <div class="stats-grid">
                 <div class="stat-card">
@@ -934,29 +927,23 @@
                 <div class="loading-progress" id="loadingProgress"></div>
             </div>
             
-            <!-- Center Search Box -->
+            <!-- Center Search Box - Search Roads -->
             <div class="map-search-center" id="mapSearchCenter">
                 <div class="map-search-box">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
                     </svg>
-                    <input type="text" placeholder="Search location..." id="locationSearch" onkeydown="if(event.key==='Enter')searchLocation()">
-                    <button onclick="searchLocation()" title="Search">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="5" y1="12" x2="19" y2="12"/>
-                            <polyline points="12 5 19 12 12 19"/>
-                        </svg>
-                    </button>
+                    <input type="text" class="search-input" placeholder="Search roads..." id="roadSearch" oninput="filterRoads()">
                 </div>
             </div>
-            
+
             <!-- Basemap Selector -->
             <div class="basemap-selector">
                 <label>Basemap:</label>
                 <select id="basemapSelect" onchange="changeBasemap()">
                     <option value="carto-dark">CartoDB Dark</option>
-                    <option value="osm">OpenStreetMap</option>
+                    <option value="osm" selected>OpenStreetMap</option>
                     <option value="esri-world">Esri World Imagery</option>
                     <option value="esri-topo">Esri Topographic</option>
                 </select>
@@ -1244,7 +1231,7 @@
             map = L.map('map', { center: [37.54, -78.5], zoom: 7, zoomControl: false });
             
             // Set default basemap
-            currentBasemap = L.tileLayer(BASEMAPS['carto-dark'].url, BASEMAPS['carto-dark'].options).addTo(map);
+            currentBasemap = L.tileLayer(BASEMAPS['osm'].url, BASEMAPS['osm'].options).addTo(map);
             
             L.control.zoom({ position: 'bottomright' }).addTo(map);
             
@@ -1276,26 +1263,6 @@
             
             currentBasemap = L.tileLayer(basemap.url, basemap.options).addTo(map);
             currentBasemap.bringToBack();
-        }
-        
-        async function searchLocation() {
-            const query = document.getElementById('locationSearch').value.trim();
-            if (!query) return;
-            
-            try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
-                const data = await response.json();
-                
-                if (data && data.length > 0) {
-                    const result = data[0];
-                    map.setView([parseFloat(result.lat), parseFloat(result.lon)], 14);
-                } else {
-                    alert('Location not found');
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                alert('Search failed. Please try again.');
-            }
         }
         
         function toggleExportMenu() {
