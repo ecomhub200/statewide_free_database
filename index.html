@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Turf.js for geometry operations -->
+    <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
     
     <style>
         :root {
@@ -646,6 +648,239 @@
             .main-container { grid-template-columns: 1fr; }
             .sidebar-left { display: none; }
         }
+
+        /* Export Dropdown Styles */
+        .dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            min-width: 160px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            z-index: 1001;
+            display: none;
+            margin-top: 4px;
+            overflow: hidden;
+        }
+
+        .dropdown-menu.show { display: block; }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+
+        .dropdown-item:hover { background: var(--bg-tertiary); }
+
+        .dropdown-item svg { flex-shrink: 0; }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 4px 0;
+        }
+
+        .dropdown-header {
+            padding: 8px 14px;
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Save/Load Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover { color: var(--text-primary); }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .saved-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s ease;
+        }
+
+        .saved-item:hover { border-color: var(--accent-blue); }
+
+        .saved-item-info h4 {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .saved-item-info p {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+        }
+
+        .saved-item-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .saved-item-btn {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.6875rem;
+            transition: all 0.2s ease;
+        }
+
+        .saved-item-btn.load {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .saved-item-btn.delete {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .saved-item-btn:hover { opacity: 0.85; }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.8125rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        /* Clipping status indicator */
+        .clipping-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 0.6875rem;
+            color: var(--success);
+        }
+
+        .clipping-status.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+            color: var(--warning);
+        }
     </style>
 </head>
 <body>
@@ -667,20 +902,63 @@
             </div>
             
             <div class="header-actions">
-                <button class="btn btn-secondary" onclick="exportData()">
+                <!-- Save Button -->
+                <button class="btn btn-secondary" onclick="openSaveModal()">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7,10 12,15 17,10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17,21 17,13 7,13 7,21"/>
+                        <polyline points="7,3 7,8 15,8"/>
                     </svg>
-                    Export
+                    Save
                 </button>
-                <button class="btn btn-primary" id="loadBtn" onclick="loadRoadData()">
+
+                <!-- Load Button -->
+                <button class="btn btn-secondary" onclick="openLoadModal()">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                     </svg>
-                    Load Roads
+                    Load
                 </button>
+
+                <!-- Export Dropdown -->
+                <div class="dropdown-container">
+                    <button class="btn btn-secondary" onclick="toggleExportMenu(event)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6,9 12,15 18,9"/>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="exportDropdown">
+                        <div class="dropdown-header">Export Format</div>
+                        <button class="dropdown-item" onclick="exportGeoJSON()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                            </svg>
+                            GeoJSON (.geojson)
+                        </button>
+                        <button class="dropdown-item" onclick="exportCSV()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <line x1="8" y1="13" x2="16" y2="13"/>
+                                <line x1="8" y1="17" x2="16" y2="17"/>
+                            </svg>
+                            CSV (.csv)
+                        </button>
+                        <button class="dropdown-item" onclick="exportKML()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="10" r="3"/>
+                                <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 7 8 11.7z"/>
+                            </svg>
+                            KML (.kml)
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -696,6 +974,14 @@
                 <div><span class="label">Boundary Source:</span> <span class="value">US Census TIGERweb</span></div>
                 <div><span class="label">FIPS Code:</span> <span class="value" id="fipsDisplay">--</span></div>
                 <div><span class="label">Area:</span> <span class="value" id="areaDisplay">--</span></div>
+            </div>
+
+            <div class="clipping-status" id="clippingStatus" style="display:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22,4 12,14.01 9,11.01"/>
+                </svg>
+                <span id="clippingText">Roads clipped to TIGERweb boundary</span>
             </div>
             
             <div class="search-box">
@@ -855,6 +1141,61 @@
                 </table>
             </div>
         </aside>
+    </div>
+
+    <!-- Save Modal -->
+    <div class="modal-overlay" id="saveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Save Current Selection</div>
+                <button class="modal-close" onclick="closeSaveModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="saveName">Save Name</label>
+                    <input type="text" id="saveName" placeholder="e.g., Henrico County Roads 2026">
+                </div>
+                <div class="input-group">
+                    <label>Current Selection</label>
+                    <div class="saved-item" style="cursor: default;">
+                        <div class="saved-item-info">
+                            <h4 id="savePreviewJurisdiction">No jurisdiction selected</h4>
+                            <p id="savePreviewStats">0 roads · 0 miles</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeSaveModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCurrentSelection()">Save to Browser</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Modal -->
+    <div class="modal-overlay" id="loadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Load Saved Selection</div>
+                <button class="modal-close" onclick="closeLoadModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="savedSelectionsList">
+                <!-- Saved items will be populated here -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeLoadModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1034,27 +1375,66 @@
         // State
         let map, boundaryLayer, roadLayers = {}, roadsData = [], allGeoJson = null;
         let currentJurisdiction = null, selectedRoad = null, activeFilter = null, layersVisible = true;
+        let boundaryPolygon = null; // Stores TIGERweb polygon for clipping
+        let db = null; // IndexedDB instance
+        const DB_NAME = 'CrashLensDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'savedSelections';
         
         // =====================================================
         // INITIALIZATION
         // =====================================================
         function initMap() {
             map = L.map('map', { center: [37.54, -78.5], zoom: 7, zoomControl: false });
-            
+
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19
             }).addTo(map);
-            
+
             L.control.zoom({ position: 'bottomright' }).addTo(map);
-            
+
             map.on('mousemove', e => {
                 document.getElementById('mapCoords').textContent = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
             });
             map.on('zoomend', () => {
                 document.getElementById('mapZoom').textContent = `Zoom: ${map.getZoom()}`;
             });
-            
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.dropdown-container')) {
+                    document.getElementById('exportDropdown').classList.remove('show');
+                }
+            });
+
             populateJurisdictionSelect();
+            initIndexedDB();
+        }
+
+        // =====================================================
+        // INDEXEDDB INITIALIZATION
+        // =====================================================
+        function initIndexedDB() {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onerror = (e) => {
+                console.error('IndexedDB error:', e.target.error);
+            };
+
+            request.onsuccess = (e) => {
+                db = e.target.result;
+                console.log('IndexedDB initialized');
+            };
+
+            request.onupgradeneeded = (e) => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains(STORE_NAME)) {
+                    const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    store.createIndex('name', 'name', { unique: false });
+                    store.createIndex('jurisdiction', 'jurisdiction', { unique: false });
+                    store.createIndex('savedAt', 'savedAt', { unique: false });
+                }
+            };
         }
         
         function populateJurisdictionSelect() {
@@ -1123,26 +1503,34 @@
         async function onJurisdictionChange() {
             const key = document.getElementById('jurisdictionSelect').value;
             if (!key) return;
-            
+
             currentJurisdiction = key;
             const j = JURISDICTIONS[key];
-            
+
+            // Clear previous data
+            clearRoads();
+            boundaryPolygon = null;
+
             // Update UI
             document.getElementById('mapJurisdiction').textContent = j.name;
             document.getElementById('fipsDisplay').textContent = `51${j.fips}`;
             document.getElementById('boundaryInfo').style.display = 'block';
-            
+            document.getElementById('clippingStatus').style.display = 'none';
+
             // Zoom to jurisdiction
             map.setView(j.center, j.zoom);
-            
+
             // Fetch and display TIGERweb boundary
             showLoading('Fetching TIGERweb boundary...', 'Querying Census Bureau API');
-            
+
             const geoJson = await fetchTIGERBoundary(key);
-            
+
             if (boundaryLayer) map.removeLayer(boundaryLayer);
-            
+
             if (geoJson && geoJson.features && geoJson.features.length > 0) {
+                // Store the polygon for clipping
+                boundaryPolygon = geoJson.features[0];
+
                 boundaryLayer = L.geoJSON(geoJson, {
                     style: {
                         color: '#3b82f6',
@@ -1152,7 +1540,7 @@
                         dashArray: '8, 4'
                     }
                 }).addTo(map);
-                
+
                 // Calculate area
                 const feature = geoJson.features[0];
                 if (feature.properties) {
@@ -1162,18 +1550,35 @@
                         document.getElementById('areaDisplay').textContent = `${sqMiles} sq mi`;
                     }
                 }
-                
+
                 map.fitBounds(boundaryLayer.getBounds(), { padding: [20, 20] });
             } else {
-                // Fallback to bbox rectangle
+                // Fallback to bbox rectangle (but no polygon for clipping)
                 const [west, south, east, north] = j.bbox;
                 boundaryLayer = L.rectangle([[south, west], [north, east]], {
                     color: '#3b82f6', weight: 2, fill: false, dashArray: '5, 5'
                 }).addTo(map);
                 document.getElementById('areaDisplay').textContent = 'N/A';
+
+                // Create a bbox polygon for clipping fallback
+                boundaryPolygon = {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                        type: 'Polygon',
+                        coordinates: [[
+                            [west, south],
+                            [east, south],
+                            [east, north],
+                            [west, north],
+                            [west, south]
+                        ]]
+                    }
+                };
             }
-            
-            hideLoading();
+
+            // Auto-load roads after boundary is set
+            await loadRoadData();
         }
         
         // =====================================================
@@ -1184,49 +1589,62 @@
                 alert('Please select a jurisdiction first');
                 return;
             }
-            
+
             const j = JURISDICTIONS[currentJurisdiction];
             const [west, south, east, north] = j.bbox;
-            
-            document.getElementById('loadBtn').disabled = true;
+
             showLoading(`Loading ${j.name}...`, 'Querying Overpass API');
-            
+
             try {
                 clearRoads();
-                
+
                 const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
-                    'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
-                
+                    'secondary','secondary_link','tertiary','tertiary_link','unclassified','residential','living_street','service'];
+
                 const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
-                
+
                 const query = `[out:json][timeout:180];(${wayQueries});out body geom;`;
-                
+
                 updateLoading('Fetching road geometries...', 'This may take 30-90 seconds');
-                
+
                 const response = await fetch('https://overpass-api.de/api/interpreter', {
                     method: 'POST',
                     body: `data=${encodeURIComponent(query)}`,
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
-                
+
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
+
                 const data = await response.json();
-                
-                updateLoading('Processing...', `${data.elements?.length || 0} segments found`);
-                
+
+                const totalBefore = data.elements?.length || 0;
+                updateLoading('Clipping to boundary...', `${totalBefore} segments found, filtering...`);
+
                 processRoadData(data);
                 updateStats();
                 updateRoadTable();
-                
+
+                // Show clipping status
+                const clippingStatus = document.getElementById('clippingStatus');
+                const clippingText = document.getElementById('clippingText');
+                clippingStatus.style.display = 'flex';
+
+                if (boundaryPolygon && boundaryPolygon.geometry.type !== 'Polygon' || !boundaryPolygon) {
+                    clippingStatus.classList.add('warning');
+                    clippingText.textContent = `Using bbox fallback - ${roadsData.length} roads shown`;
+                } else {
+                    clippingStatus.classList.remove('warning');
+                    clippingText.textContent = `${roadsData.length} roads clipped to TIGERweb boundary (${totalBefore - roadsData.length} filtered out)`;
+                }
+
                 document.getElementById('infoBanner').classList.add('loaded');
                 document.getElementById('infoBanner').innerHTML = `
                     <h3>✓ ${j.name} Loaded</h3>
-                    <p>${roadsData.length.toLocaleString()} road segments loaded with TIGERweb boundary.</p>
+                    <p>${roadsData.length.toLocaleString()} road segments within TIGERweb boundary.</p>
                 `;
-                
+
                 hideLoading();
-                
+
             } catch (error) {
                 console.error('Error:', error);
                 updateLoading('Error', error.message);
@@ -1234,25 +1652,50 @@
                     hideLoading();
                     alert(`Failed: ${error.message}`);
                 }, 2000);
-            } finally {
-                document.getElementById('loadBtn').disabled = false;
             }
         }
         
         function processRoadData(data) {
             if (!data.elements?.length) return;
-            
+
             allGeoJson = { type: 'FeatureCollection', features: [] };
-            
+
             data.elements.forEach(el => {
                 if (el.type !== 'way' || !el.geometry) return;
-                
+
                 const tags = el.tags || {};
                 const highway = tags.highway;
                 const funcClass = OSM_TO_VDOT[highway] || '7';
                 const coords = el.geometry.map(p => [p.lat, p.lon]);
+
+                // Check if road is inside the boundary polygon using Turf.js
+                if (boundaryPolygon && typeof turf !== 'undefined') {
+                    // Create a line from the road coordinates (lon, lat format for Turf)
+                    const lineCoords = coords.map(c => [c[1], c[0]]);
+                    const line = turf.lineString(lineCoords);
+
+                    // Check if any part of the road intersects with the boundary
+                    let isInside = false;
+                    try {
+                        // Check if line intersects with polygon
+                        if (turf.booleanIntersects(line, boundaryPolygon)) {
+                            isInside = true;
+                        }
+                        // Also check if any point is inside (for fully contained roads)
+                        if (!isInside) {
+                            const midpoint = turf.midpoint(turf.point(lineCoords[0]), turf.point(lineCoords[lineCoords.length - 1]));
+                            isInside = turf.booleanPointInPolygon(midpoint, boundaryPolygon);
+                        }
+                    } catch (e) {
+                        // If geometry check fails, include the road anyway
+                        isInside = true;
+                    }
+
+                    if (!isInside) return; // Skip roads outside the boundary
+                }
+
                 const length = calcLength(coords);
-                
+
                 const road = {
                     id: el.id,
                     name: tags.name || tags.ref || `Unnamed ${highway}`,
@@ -1263,10 +1706,10 @@
                     surface: tags.surface || '',
                     length, coords
                 };
-                
+
                 roadsData.push(road);
                 addRoadToMap(road);
-                
+
                 allGeoJson.features.push({
                     type: 'Feature',
                     properties: { osm_id: el.id, name: road.name, highway, funcClass, ref: road.ref, length_miles: length },
@@ -1451,19 +1894,365 @@
             document.getElementById('infoBanner').innerHTML = `<h3>🗺️ TIGERweb + OSM Data</h3><p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data.</p>`;
         }
         
-        function exportData() {
-            if (!allGeoJson?.features?.length) { alert('No data to export.'); return; }
+        // =====================================================
+        // EXPORT FUNCTIONS
+        // =====================================================
+        function toggleExportMenu(e) {
+            e.stopPropagation();
+            document.getElementById('exportDropdown').classList.toggle('show');
+        }
+
+        function getExportFilename(ext) {
             const j = JURISDICTIONS[currentJurisdiction];
             const name = j?.name?.toLowerCase().replace(/\s+/g, '_') || 'virginia';
-            const blob = new Blob([JSON.stringify(allGeoJson, null, 2)], { type: 'application/json' });
+            const date = new Date().toISOString().split('T')[0];
+            return `${name}_vdot_roads_${date}.${ext}`;
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${name}_vdot_roads.geojson`;
+            a.download = filename;
             a.click();
             URL.revokeObjectURL(url);
+            document.getElementById('exportDropdown').classList.remove('show');
         }
-        
+
+        function exportGeoJSON() {
+            if (!allGeoJson?.features?.length) {
+                alert('No data to export. Please load road data first.');
+                return;
+            }
+            const content = JSON.stringify(allGeoJson, null, 2);
+            downloadFile(content, getExportFilename('geojson'), 'application/json');
+        }
+
+        function exportCSV() {
+            if (!roadsData?.length) {
+                alert('No data to export. Please load road data first.');
+                return;
+            }
+
+            const headers = ['OSM_ID', 'Name', 'Highway_Type', 'Functional_Class', 'FC_Name', 'Route_Ref', 'Lanes', 'Speed_Limit', 'Surface', 'Length_Miles', 'Start_Lat', 'Start_Lon', 'End_Lat', 'End_Lon'];
+            const rows = roadsData.map(r => {
+                const startCoord = r.coords[0];
+                const endCoord = r.coords[r.coords.length - 1];
+                return [
+                    r.id,
+                    `"${(r.name || '').replace(/"/g, '""')}"`,
+                    r.highway,
+                    r.funcClass,
+                    FC_STYLES[r.funcClass]?.name || '',
+                    r.ref || '',
+                    r.lanes || '',
+                    r.maxspeed || '',
+                    r.surface || '',
+                    r.length.toFixed(4),
+                    startCoord[0].toFixed(6),
+                    startCoord[1].toFixed(6),
+                    endCoord[0].toFixed(6),
+                    endCoord[1].toFixed(6)
+                ].join(',');
+            });
+
+            const csvContent = [headers.join(','), ...rows].join('\n');
+            downloadFile(csvContent, getExportFilename('csv'), 'text/csv');
+        }
+
+        function exportKML() {
+            if (!roadsData?.length) {
+                alert('No data to export. Please load road data first.');
+                return;
+            }
+
+            const j = JURISDICTIONS[currentJurisdiction];
+            const jurisdictionName = j?.name || 'Virginia';
+
+            // KML color format is AABBGGRR (alpha, blue, green, red)
+            const fcColors = {
+                '1': 'ffff7000', // Interstate - blue
+                '2': 'ff0055ff', // Freeway - orange
+                '3': 'ff0026ff', // Principal Arterial - red
+                '4': 'ff00e6e6', // Minor Arterial - yellow
+                '5': 'ff009155', // Major Collector - green
+                '6': 'ff0077ff', // Minor Collector - orange
+                '7': 'ff00c4a4'  // Local - lime
+            };
+
+            let placemarks = '';
+            roadsData.forEach(r => {
+                const coordString = r.coords.map(c => `${c[1]},${c[0]},0`).join(' ');
+                const color = fcColors[r.funcClass] || 'ff00ff00';
+                const width = FC_STYLES[r.funcClass]?.weight || 2;
+
+                placemarks += `
+    <Placemark>
+      <name><![CDATA[${r.name}]]></name>
+      <description><![CDATA[
+        <b>Functional Class:</b> FC ${r.funcClass} - ${FC_STYLES[r.funcClass]?.name || 'Unknown'}<br>
+        <b>Highway Type:</b> ${r.highway}<br>
+        <b>Route Ref:</b> ${r.ref || 'N/A'}<br>
+        <b>Length:</b> ${r.length.toFixed(3)} miles<br>
+        <b>OSM ID:</b> ${r.id}
+      ]]></description>
+      <Style>
+        <LineStyle>
+          <color>${color}</color>
+          <width>${width}</width>
+        </LineStyle>
+      </Style>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>${coordString}</coordinates>
+      </LineString>
+    </Placemark>`;
+            });
+
+            const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${jurisdictionName} - VDOT Road Classification</name>
+    <description>Road network with VDOT functional classification exported from CRASH LENS</description>
+    ${placemarks}
+  </Document>
+</kml>`;
+
+            downloadFile(kmlContent, getExportFilename('kml'), 'application/vnd.google-earth.kml+xml');
+        }
+
+        // =====================================================
+        // SAVE/LOAD MODAL FUNCTIONS
+        // =====================================================
+        function openSaveModal() {
+            if (!roadsData?.length) {
+                alert('No data to save. Please load road data first.');
+                return;
+            }
+
+            const j = JURISDICTIONS[currentJurisdiction];
+            document.getElementById('savePreviewJurisdiction').textContent = j?.name || 'Unknown';
+            document.getElementById('savePreviewStats').textContent = `${roadsData.length} roads · ${roadsData.reduce((s, r) => s + r.length, 0).toFixed(1)} miles`;
+            document.getElementById('saveName').value = `${j?.name || 'Virginia'} - ${new Date().toLocaleDateString()}`;
+            document.getElementById('saveModal').classList.add('show');
+        }
+
+        function closeSaveModal() {
+            document.getElementById('saveModal').classList.remove('show');
+        }
+
+        function openLoadModal() {
+            loadSavedSelectionsList();
+            document.getElementById('loadModal').classList.add('show');
+        }
+
+        function closeLoadModal() {
+            document.getElementById('loadModal').classList.remove('show');
+        }
+
+        async function saveCurrentSelection() {
+            const name = document.getElementById('saveName').value.trim();
+            if (!name) {
+                alert('Please enter a name for this save.');
+                return;
+            }
+
+            if (!db) {
+                alert('Database not initialized. Please refresh the page.');
+                return;
+            }
+
+            const saveData = {
+                name: name,
+                jurisdiction: currentJurisdiction,
+                jurisdictionName: JURISDICTIONS[currentJurisdiction]?.name || 'Unknown',
+                savedAt: new Date().toISOString(),
+                roadCount: roadsData.length,
+                totalMiles: roadsData.reduce((s, r) => s + r.length, 0),
+                boundaryPolygon: boundaryPolygon,
+                roadsData: roadsData,
+                allGeoJson: allGeoJson
+            };
+
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                await new Promise((resolve, reject) => {
+                    const request = store.add(saveData);
+                    request.onsuccess = resolve;
+                    request.onerror = () => reject(request.error);
+                });
+
+                closeSaveModal();
+                alert(`Saved "${name}" successfully!`);
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('Failed to save: ' + error.message);
+            }
+        }
+
+        async function loadSavedSelectionsList() {
+            const container = document.getElementById('savedSelectionsList');
+
+            if (!db) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Database not initialized</p></div>';
+                return;
+            }
+
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    const items = request.result || [];
+
+                    if (items.length === 0) {
+                        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📁</div><p>No saved selections yet.<br>Load road data and click Save to create one.</p></div>';
+                        return;
+                    }
+
+                    // Sort by savedAt descending
+                    items.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+
+                    container.innerHTML = items.map(item => {
+                        const date = new Date(item.savedAt).toLocaleString();
+                        return `
+                            <div class="saved-item">
+                                <div class="saved-item-info">
+                                    <h4>${item.name}</h4>
+                                    <p>${item.jurisdictionName} · ${item.roadCount} roads · ${item.totalMiles.toFixed(1)} mi · ${date}</p>
+                                </div>
+                                <div class="saved-item-actions">
+                                    <button class="saved-item-btn load" onclick="loadSavedSelection(${item.id})">Load</button>
+                                    <button class="saved-item-btn delete" onclick="deleteSavedSelection(${item.id})">Delete</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                };
+
+                request.onerror = () => {
+                    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Error loading saved items</p></div>';
+                };
+            } catch (error) {
+                console.error('Load list error:', error);
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Error loading saved items</p></div>';
+            }
+        }
+
+        async function loadSavedSelection(id) {
+            if (!db) {
+                alert('Database not initialized');
+                return;
+            }
+
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(id);
+
+                request.onsuccess = () => {
+                    const data = request.result;
+                    if (!data) {
+                        alert('Save not found');
+                        return;
+                    }
+
+                    closeLoadModal();
+                    showLoading('Loading saved selection...', data.name);
+
+                    // Restore state
+                    currentJurisdiction = data.jurisdiction;
+                    boundaryPolygon = data.boundaryPolygon;
+                    clearRoads();
+
+                    // Update jurisdiction selector
+                    document.getElementById('jurisdictionSelect').value = data.jurisdiction;
+
+                    // Update UI
+                    const j = JURISDICTIONS[data.jurisdiction];
+                    if (j) {
+                        document.getElementById('mapJurisdiction').textContent = j.name;
+                        document.getElementById('fipsDisplay').textContent = `51${j.fips}`;
+                        document.getElementById('boundaryInfo').style.display = 'block';
+                    }
+
+                    // Restore boundary layer
+                    if (boundaryLayer) map.removeLayer(boundaryLayer);
+                    if (boundaryPolygon) {
+                        boundaryLayer = L.geoJSON(boundaryPolygon, {
+                            style: {
+                                color: '#3b82f6',
+                                weight: 3,
+                                fillColor: '#3b82f6',
+                                fillOpacity: 0.05,
+                                dashArray: '8, 4'
+                            }
+                        }).addTo(map);
+                        map.fitBounds(boundaryLayer.getBounds(), { padding: [20, 20] });
+                    }
+
+                    // Restore roads
+                    roadsData = data.roadsData || [];
+                    allGeoJson = data.allGeoJson || { type: 'FeatureCollection', features: [] };
+
+                    roadsData.forEach(road => addRoadToMap(road));
+
+                    updateStats();
+                    updateRoadTable();
+
+                    // Update clipping status
+                    const clippingStatus = document.getElementById('clippingStatus');
+                    clippingStatus.style.display = 'flex';
+                    clippingStatus.classList.remove('warning');
+                    document.getElementById('clippingText').textContent = `Loaded ${roadsData.length} roads from saved selection`;
+
+                    document.getElementById('infoBanner').classList.add('loaded');
+                    document.getElementById('infoBanner').innerHTML = `
+                        <h3>✓ Loaded from Save</h3>
+                        <p>${data.name} · ${roadsData.length.toLocaleString()} road segments</p>
+                    `;
+
+                    hideLoading();
+                };
+
+                request.onerror = () => {
+                    alert('Error loading save');
+                };
+            } catch (error) {
+                console.error('Load error:', error);
+                alert('Failed to load: ' + error.message);
+            }
+        }
+
+        async function deleteSavedSelection(id) {
+            if (!confirm('Are you sure you want to delete this saved selection?')) {
+                return;
+            }
+
+            if (!db) {
+                alert('Database not initialized');
+                return;
+            }
+
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                await new Promise((resolve, reject) => {
+                    const request = store.delete(id);
+                    request.onsuccess = resolve;
+                    request.onerror = () => reject(request.error);
+                });
+
+                loadSavedSelectionsList();
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Failed to delete: ' + error.message);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', initMap);
     </script>
 </body>
