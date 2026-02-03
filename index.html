@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VDOT Road Classification Viewer | CRASH LENS - Virginia</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #111827;
+            --bg-tertiary: #1f2937;
+            --bg-card: #161e2e;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #8b5cf6;
+            --border-color: #374151;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --fc-1: #0070ff;
+            --fc-2: #ff5500;
+            --fc-3: #ff2600;
+            --fc-4: #e6e600;
+            --fc-5: #559100;
+            --fc-6: #ff7700;
+            --fc-7: #a4c400;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        
+        .logo-section { display: flex; align-items: center; gap: 0.75rem; }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+        
+        .logo-text h1 {
+            font-size: 1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .logo-text span {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .jurisdiction-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-card);
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .jurisdiction-selector label {
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        
+        .jurisdiction-selector select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.375rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            min-width: 180px;
+        }
+        
+        .jurisdiction-selector select:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+        
+        .header-actions { display: flex; gap: 0.5rem; align-items: center; }
+        
+        .btn {
+            padding: 0.375rem 0.75rem;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover { background: var(--border-color); }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 300px 1fr 340px;
+            height: calc(100vh - 57px);
+        }
+        
+        .sidebar-left {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .section-title {
+            font-size: 0.625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.625rem;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 3px;
+            height: 10px;
+            background: var(--accent-cyan);
+            border-radius: 2px;
+        }
+        
+        .info-banner {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .info-banner h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-bottom: 0.25rem;
+        }
+        
+        .info-banner p {
+            font-size: 0.625rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+        
+        .info-banner.loaded {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(6, 182, 212, 0.15));
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .info-banner.loaded h3 { color: var(--success); }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.625rem;
+        }
+        
+        .stat-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .stat-label {
+            font-size: 0.5625rem;
+            color: var(--text-muted);
+        }
+        
+        .search-box { position: relative; margin-bottom: 1rem; }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem 0.5rem 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+        }
+        
+        .search-input::placeholder { color: var(--text-muted); }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 0.625rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            width: 12px;
+            height: 12px;
+        }
+        
+        .legend-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .legend-item:last-child { border-bottom: none; }
+        
+        .legend-item:hover, .legend-item.active {
+            background: var(--bg-tertiary);
+            margin: 0 -0.75rem;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        
+        .legend-color {
+            width: 18px;
+            height: 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        
+        .legend-info { flex: 1; }
+        
+        .legend-name {
+            font-size: 0.6875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .legend-code {
+            font-size: 0.5625rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .legend-count {
+            font-size: 0.625rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            min-width: 28px;
+            text-align: center;
+        }
+        
+        .map-section {
+            position: relative;
+            background: var(--bg-primary);
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+        }
+        
+        .leaflet-container { background: var(--bg-primary) !important; }
+        
+        .map-controls {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .map-control-btn {
+            width: 32px;
+            height: 32px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .map-control-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+        }
+        
+        .map-info-overlay {
+            position: absolute;
+            bottom: 0.5rem;
+            left: 0.5rem;
+            z-index: 1000;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.625rem;
+        }
+        
+        .map-info-overlay .coords { color: var(--accent-cyan); }
+        .map-info-overlay .zoom-level { color: var(--text-muted); margin-left: 0.5rem; }
+        .map-info-overlay .jurisdiction { color: var(--text-secondary); display: block; margin-top: 0.125rem; }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 15, 26, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        
+        .loading-overlay.hidden { display: none; }
+        
+        .loading-spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .loading-text {
+            margin-top: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-align: center;
+        }
+        
+        .loading-progress {
+            margin-top: 0.25rem;
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.625rem;
+        }
+        
+        .sidebar-right {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .details-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .details-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .details-subtitle {
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+        }
+        
+        .road-details { padding: 1rem; flex: 1; }
+        
+        .no-selection {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            color: var(--text-muted);
+        }
+        
+        .no-selection-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+        
+        .no-selection p {
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+        
+        .road-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .road-card-header {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .road-class-badge {
+            padding: 0.1875rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.5625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .road-name {
+            font-size: 0.8125rem;
+            font-weight: 600;
+        }
+        
+        .road-card-body { padding: 0.75rem; }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.375rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .detail-row:last-child { border-bottom: none; }
+        
+        .detail-label {
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+        }
+        
+        .detail-value {
+            font-size: 0.6875rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            text-align: right;
+            max-width: 55%;
+        }
+        
+        .road-list-section {
+            border-top: 1px solid var(--border-color);
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .road-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .road-count {
+            font-size: 0.5625rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .road-table { width: 100%; border-collapse: collapse; }
+        
+        .road-table th {
+            text-align: left;
+            font-size: 0.5625rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 0.25rem;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+        }
+        
+        .road-table td {
+            padding: 0.375rem 0.25rem;
+            font-size: 0.6875rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        
+        .road-table tr:hover td { background: var(--bg-tertiary); }
+        .road-table tr.selected td { background: rgba(59, 130, 246, 0.15); }
+        
+        .class-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.25rem;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-secondary) !important;
+            border: 1px solid var(--border-color) !important;
+            border-radius: 6px !important;
+        }
+        
+        .leaflet-popup-content {
+            margin: 0 !important;
+            padding: 0.75rem !important;
+            color: var(--text-primary) !important;
+            font-family: 'Plus Jakarta Sans', sans-serif !important;
+        }
+        
+        .leaflet-popup-tip { background: var(--bg-secondary) !important; }
+        
+        .popup-title { font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .popup-class {
+            display: inline-block;
+            padding: 0.125rem 0.25rem;
+            border-radius: 3px;
+            font-size: 0.5625rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .popup-details { font-size: 0.625rem; color: var(--text-secondary); }
+        .popup-details div { margin-top: 0.125rem; }
+        
+        .boundary-info {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.625rem;
+            margin-bottom: 1rem;
+            font-size: 0.625rem;
+        }
+        
+        .boundary-info .label { color: var(--text-muted); }
+        .boundary-info .value { color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; }
+        
+        @media (max-width: 1200px) {
+            .main-container { grid-template-columns: 260px 1fr; }
+            .sidebar-right { display: none; }
+        }
+        
+        @media (max-width: 768px) {
+            .main-container { grid-template-columns: 1fr; }
+            .sidebar-left { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo-section">
+            <div class="logo-icon">CL</div>
+            <div class="logo-text">
+                <h1>CRASH LENS</h1>
+                <span>VDOT Road Classification · TIGERweb Boundaries</span>
+            </div>
+        </div>
+        
+        <div class="header-controls">
+            <div class="jurisdiction-selector">
+                <label>Jurisdiction:</label>
+                <select id="jurisdictionSelect" onchange="onJurisdictionChange()">
+                    <option value="">-- Select Jurisdiction --</option>
+                </select>
+            </div>
+            
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportData()">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7,10 12,15 17,10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    Export
+                </button>
+                <button class="btn btn-primary" id="loadBtn" onclick="loadRoadData()">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                    </svg>
+                    Load Roads
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar-left">
+            <div class="info-banner" id="infoBanner">
+                <h3>🗺️ TIGERweb + OSM Data</h3>
+                <p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data from OpenStreetMap with accurate geometry.</p>
+            </div>
+            
+            <div class="boundary-info" id="boundaryInfo" style="display:none;">
+                <div><span class="label">Boundary Source:</span> <span class="value">US Census TIGERweb</span></div>
+                <div><span class="label">FIPS Code:</span> <span class="value" id="fipsDisplay">--</span></div>
+                <div><span class="label">Area:</span> <span class="value" id="areaDisplay">--</span></div>
+            </div>
+            
+            <div class="search-box">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" placeholder="Search roads..." id="roadSearch" oninput="filterRoads()">
+            </div>
+            
+            <div class="section-title">Statistics</div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalRoads">0</div>
+                    <div class="stat-label">Road Segments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalMiles">0</div>
+                    <div class="stat-label">Total Miles</div>
+                </div>
+            </div>
+            
+            <div class="section-title">VDOT Functional Classes</div>
+            <div class="legend-card">
+                <div class="legend-item" data-class="1" onclick="filterByClass('1')">
+                    <div class="legend-color" style="background: var(--fc-1);"></div>
+                    <div class="legend-info">
+                        <div class="legend-name">Interstate</div>
+                        <div class="legend-code">FC 1 · motorway</div>
+                    </div>
+                    <div class="legend-count" id="count-1">0</div>
+                </div>
+                <div class="legend-item" data-class="2" onclick="filterByClass('2')">
+                    <div class="legend-color" style="background: var(--fc-2);"></div>
+                    <div class="legend-info">
+                        <div class="legend-name">Freeway/Expressway</div>
+                        <div class="legend-code">FC 2 · trunk</div>
+                    </div>
+                    <div class="legend-count" id="count-2">0</div>
+                </div>
+                <div class="legend-item" data-class="3" onclick="filterByClass('3')">
+                    <div class="legend-color" style="background: var(--fc-3);"></div>
+                    <div class="legend-info">
+                        <div class="legend-name">Principal Arterial</div>
+                        <div class="legend-code">FC 3 · primary</div>
+                    </div>
+                    <div class="legend-count" id="count-3">0</div>
+                </div>
+                <div class="legend-item" data-class="4" onclick="filterByClass('4')">
+                    <div class="legend-color" style="background: var(--fc-4);"></div>
+                    <div class="legend-info">
+                        <div class="legend-name">Minor Arterial</div>
+                        <div class="legend-code">FC 4 · secondary</div>
+                    </div>
+                    <div class="legend-count" id="count-4">0</div>
+                </div>
+                <div class="legend-item" data-class="5" onclick="filterByClass('5')">
+                    <div class="legend-color" style="background: var(--fc-5);"></div>
+                    <div class="legend-info">
+                        <div class="legend-name">Major Collector</div>
+                        <div class="legend-code">FC 5 · tertiary</div>
+                    </div>
+                    <div class="legend-count" id="count-5">0</div>
+                </div>
+                <div class="legend-item" data-class="6" onclick="filterByClass('6')">
+                    <div class="legend-color" style="background: var(--fc-6);"></div>
+                    <div class="legend-info">
+                        <div class="legend-name">Minor Collector</div>
+                        <div class="legend-code">FC 6 · unclassified</div>
+                    </div>
+                    <div class="legend-count" id="count-6">0</div>
+                </div>
+                <div class="legend-item" data-class="7" onclick="filterByClass('7')">
+                    <div class="legend-color" style="background: var(--fc-7);"></div>
+                    <div class="legend-info">
+                        <div class="legend-name">Local</div>
+                        <div class="legend-code">FC 7 · residential</div>
+                    </div>
+                    <div class="legend-count" id="count-7">0</div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="map-section">
+            <div id="map"></div>
+            
+            <div class="loading-overlay hidden" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loadingText">Loading...</div>
+                <div class="loading-progress" id="loadingProgress"></div>
+            </div>
+            
+            <div class="map-controls">
+                <button class="map-control-btn" onclick="resetView()" title="Reset View">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                    </svg>
+                </button>
+                <button class="map-control-btn" onclick="toggleLayers()" title="Toggle Roads">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12,2 2,7 12,12 22,7"/>
+                        <polyline points="2,17 12,22 22,17"/>
+                        <polyline points="2,12 12,17 22,12"/>
+                    </svg>
+                </button>
+                <button class="map-control-btn" onclick="fitToBounds()" title="Fit to Data">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h6v6"/>
+                        <path d="M9 21H3v-6"/>
+                        <path d="M21 3l-7 7"/>
+                        <path d="M3 21l7-7"/>
+                    </svg>
+                </button>
+                <button class="map-control-btn" onclick="clearData()" title="Clear">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="map-info-overlay">
+                <span class="coords" id="mapCoords">37.5407, -77.4360</span>
+                <span class="zoom-level" id="mapZoom">Zoom: 8</span>
+                <span class="jurisdiction" id="mapJurisdiction">Virginia</span>
+            </div>
+        </section>
+
+        <aside class="sidebar-right">
+            <div class="details-header">
+                <div class="details-title">Road Details</div>
+                <div class="details-subtitle">Click a road segment</div>
+            </div>
+            
+            <div class="road-details" id="roadDetails">
+                <div class="no-selection">
+                    <div class="no-selection-icon">🛣️</div>
+                    <p>Select a jurisdiction and load roads to view details.</p>
+                </div>
+            </div>
+            
+            <div class="road-list-section">
+                <div class="road-list-header">
+                    <div class="section-title" style="margin-bottom: 0;">Road List</div>
+                    <div class="road-count" id="roadListCount">0 segments</div>
+                </div>
+                <table class="road-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>FC</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roadTableBody"></tbody>
+                </table>
+            </div>
+        </aside>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // =====================================================
+        // VIRGINIA JURISDICTIONS - ALL 133 Counties & Cities
+        // Data from Census TIGER with FIPS codes
+        // =====================================================
+        const JURISDICTIONS = {
+            // Counties (95)
+            accomack: { name: "Accomack County", type: "county", fips: "001", center: [37.76, -75.66], zoom: 10, bbox: [-76.0533, 37.2918, -75.2429, 38.0274] },
+            albemarle: { name: "Albemarle County", type: "county", fips: "003", center: [38.02, -78.56], zoom: 10, bbox: [-78.8399, 37.7273, -78.2637, 38.3034] },
+            alleghany: { name: "Alleghany County", type: "county", fips: "005", center: [37.79, -79.95], zoom: 10, bbox: [-80.2213, 37.5672, -79.6473, 38.0134] },
+            amelia: { name: "Amelia County", type: "county", fips: "007", center: [37.34, -77.98], zoom: 10, bbox: [-78.1777, 37.1458, -77.6553, 37.4678] },
+            amherst: { name: "Amherst County", type: "county", fips: "009", center: [37.6, -79.14], zoom: 10, bbox: [-79.4745, 37.3962, -78.8591, 37.806] },
+            appomattox: { name: "Appomattox County", type: "county", fips: "011", center: [37.37, -78.81], zoom: 10, bbox: [-79.0929, 37.2061, -78.5716, 37.5494] },
+            arlington: { name: "Arlington County", type: "county", fips: "013", center: [38.88, -77.1], zoom: 12, bbox: [-77.1722, 38.8275, -77.032, 38.9341] },
+            augusta: { name: "Augusta County", type: "county", fips: "015", center: [38.16, -79.13], zoom: 10, bbox: [-79.5431, 37.8873, -78.8617, 38.4767] },
+            bath: { name: "Bath County", type: "county", fips: "017", center: [38.07, -79.73], zoom: 10, bbox: [-80.0564, 37.8573, -79.4479, 38.3947] },
+            bedford_county: { name: "Bedford County", type: "county", fips: "019", center: [37.31, -79.52], zoom: 10, bbox: [-79.7888, 37.0341, -79.2507, 37.513] },
+            bland: { name: "Bland County", type: "county", fips: "021", center: [37.1, -81.12], zoom: 10, bbox: [-81.3447, 36.9649, -80.8546, 37.2462] },
+            botetourt: { name: "Botetourt County", type: "county", fips: "023", center: [37.55, -79.81], zoom: 10, bbox: [-80.0746, 37.2621, -79.5384, 37.7892] },
+            brunswick: { name: "Brunswick County", type: "county", fips: "025", center: [36.76, -77.85], zoom: 10, bbox: [-78.0045, 36.5437, -77.3991, 36.9601] },
+            buchanan: { name: "Buchanan County", type: "county", fips: "027", center: [37.27, -82.03], zoom: 10, bbox: [-82.3145, 37.0199, -81.7292, 37.5137] },
+            buckingham: { name: "Buckingham County", type: "county", fips: "029", center: [37.55, -78.55], zoom: 10, bbox: [-78.8693, 37.3051, -78.2554, 37.7318] },
+            campbell: { name: "Campbell County", type: "county", fips: "031", center: [37.2, -79.09], zoom: 10, bbox: [-79.4361, 36.9684, -78.9035, 37.4249] },
+            caroline: { name: "Caroline County", type: "county", fips: "033", center: [38.03, -77.35], zoom: 10, bbox: [-77.6421, 37.7538, -76.9722, 38.241] },
+            carroll: { name: "Carroll County", type: "county", fips: "035", center: [36.73, -80.73], zoom: 10, bbox: [-80.9618, 36.5454, -80.4409, 36.9417] },
+            charles_city: { name: "Charles City County", type: "county", fips: "036", center: [37.36, -77.06], zoom: 10, bbox: [-77.3504, 37.2247, -76.8551, 37.4756] },
+            charlotte: { name: "Charlotte County", type: "county", fips: "037", center: [37.01, -78.66], zoom: 10, bbox: [-79.0418, 36.8483, -78.4394, 37.241] },
+            chesterfield: { name: "Chesterfield County", type: "county", fips: "041", center: [37.38, -77.5], zoom: 10, bbox: [-77.808, 37.1524, -77.3744, 37.5559] },
+            clarke: { name: "Clarke County", type: "county", fips: "043", center: [39.11, -77.99], zoom: 11, bbox: [-78.1355, 39.0059, -77.8276, 39.2321] },
+            craig: { name: "Craig County", type: "county", fips: "045", center: [37.47, -80.23], zoom: 10, bbox: [-80.4591, 37.2311, -79.9754, 37.5958] },
+            culpeper: { name: "Culpeper County", type: "county", fips: "047", center: [38.49, -77.96], zoom: 10, bbox: [-78.1631, 38.2803, -77.6158, 38.7127] },
+            cumberland: { name: "Cumberland County", type: "county", fips: "049", center: [37.51, -78.24], zoom: 10, bbox: [-78.4641, 37.2972, -78.0659, 37.6791] },
+            dickenson: { name: "Dickenson County", type: "county", fips: "051", center: [37.12, -82.35], zoom: 10, bbox: [-82.5638, 36.963, -82.0936, 37.3028] },
+            dinwiddie: { name: "Dinwiddie County", type: "county", fips: "053", center: [37.08, -77.58], zoom: 10, bbox: [-77.8651, 36.8633, -77.3139, 37.2789] },
+            essex: { name: "Essex County", type: "county", fips: "057", center: [37.94, -76.94], zoom: 10, bbox: [-77.1551, 37.7641, -76.708, 38.0844] },
+            fairfax_county: { name: "Fairfax County", type: "county", fips: "059", center: [38.83, -77.28], zoom: 10, bbox: [-77.5351, 38.5943, -77.0492, 39.0003] },
+            fauquier: { name: "Fauquier County", type: "county", fips: "061", center: [38.72, -77.81], zoom: 10, bbox: [-78.0057, 38.4541, -77.5286, 38.9303] },
+            floyd: { name: "Floyd County", type: "county", fips: "063", center: [36.93, -80.36], zoom: 10, bbox: [-80.5399, 36.7413, -80.1345, 37.1089] },
+            fluvanna: { name: "Fluvanna County", type: "county", fips: "065", center: [37.84, -78.28], zoom: 10, bbox: [-78.531, 37.7032, -78.1074, 38.0281] },
+            franklin_county: { name: "Franklin County", type: "county", fips: "067", center: [37.0, -79.89], zoom: 10, bbox: [-80.1426, 36.742, -79.5912, 37.1818] },
+            frederick: { name: "Frederick County", type: "county", fips: "069", center: [39.28, -78.27], zoom: 10, bbox: [-78.5259, 39.0585, -78.0039, 39.466] },
+            giles: { name: "Giles County", type: "county", fips: "071", center: [37.32, -80.66], zoom: 10, bbox: [-80.8632, 37.1159, -80.359, 37.4871] },
+            gloucester: { name: "Gloucester County", type: "county", fips: "073", center: [37.41, -76.52], zoom: 10, bbox: [-76.7568, 37.2188, -76.3505, 37.5575] },
+            goochland: { name: "Goochland County", type: "county", fips: "075", center: [37.72, -77.93], zoom: 10, bbox: [-78.1058, 37.5484, -77.6555, 37.898] },
+            grayson: { name: "Grayson County", type: "county", fips: "077", center: [36.66, -81.22], zoom: 10, bbox: [-81.5319, 36.538, -80.9013, 36.8579] },
+            greene: { name: "Greene County", type: "county", fips: "079", center: [38.3, -78.47], zoom: 10, bbox: [-78.6421, 38.1407, -78.3229, 38.4529] },
+            greensville: { name: "Greensville County", type: "county", fips: "081", center: [36.68, -77.56], zoom: 10, bbox: [-77.7425, 36.5443, -77.3553, 36.8526] },
+            halifax: { name: "Halifax County", type: "county", fips: "083", center: [36.77, -78.93], zoom: 10, bbox: [-79.2234, 36.5413, -78.6479, 37.0302] },
+            hanover: { name: "Hanover County", type: "county", fips: "085", center: [37.76, -77.48], zoom: 10, bbox: [-77.7551, 37.5679, -77.1941, 37.9853] },
+            henrico: { name: "Henrico County", type: "county", fips: "087", center: [37.55, -77.45], zoom: 11, bbox: [-77.6604, 37.3862, -77.1462, 37.7234] },
+            henry: { name: "Henry County", type: "county", fips: "089", center: [36.68, -79.87], zoom: 10, bbox: [-80.1432, 36.5407, -79.5969, 36.9396] },
+            highland: { name: "Highland County", type: "county", fips: "091", center: [38.37, -79.56], zoom: 10, bbox: [-79.8929, 38.1456, -79.3181, 38.666] },
+            isle_of_wight: { name: "Isle of Wight County", type: "county", fips: "093", center: [36.9, -76.71], zoom: 10, bbox: [-76.9361, 36.7049, -76.431, 37.1191] },
+            james_city: { name: "James City County", type: "county", fips: "095", center: [37.31, -76.78], zoom: 10, bbox: [-76.9305, 37.1685, -76.5451, 37.4485] },
+            king_and_queen: { name: "King and Queen County", type: "county", fips: "097", center: [37.72, -76.88], zoom: 10, bbox: [-77.1684, 37.5453, -76.7006, 37.9027] },
+            king_george: { name: "King George County", type: "county", fips: "099", center: [38.27, -77.16], zoom: 10, bbox: [-77.3689, 38.1634, -76.9934, 38.4512] },
+            king_william: { name: "King William County", type: "county", fips: "101", center: [37.7, -77.08], zoom: 10, bbox: [-77.3271, 37.5423, -76.8961, 37.901] },
+            lancaster: { name: "Lancaster County", type: "county", fips: "103", center: [37.7, -76.46], zoom: 10, bbox: [-76.6048, 37.5893, -76.2782, 37.8506] },
+            lee: { name: "Lee County", type: "county", fips: "105", center: [36.7, -83.12], zoom: 10, bbox: [-83.4754, 36.5404, -82.7318, 36.8935] },
+            loudoun: { name: "Loudoun County", type: "county", fips: "107", center: [39.08, -77.64], zoom: 10, bbox: [-77.9622, 38.8416, -77.3253, 39.3218] },
+            louisa: { name: "Louisa County", type: "county", fips: "109", center: [38.0, -78.0], zoom: 10, bbox: [-78.2012, 37.7918, -77.6586, 38.1958] },
+            lunenburg: { name: "Lunenburg County", type: "county", fips: "111", center: [36.95, -78.26], zoom: 10, bbox: [-78.5518, 36.7891, -78.0337, 37.1497] },
+            madison: { name: "Madison County", type: "county", fips: "113", center: [38.41, -78.28], zoom: 10, bbox: [-78.5416, 38.2169, -78.1528, 38.5316] },
+            mathews: { name: "Mathews County", type: "county", fips: "115", center: [37.43, -76.32], zoom: 11, bbox: [-76.4665, 37.2818, -76.2155, 37.5237] },
+            mecklenburg: { name: "Mecklenburg County", type: "county", fips: "117", center: [36.68, -78.37], zoom: 10, bbox: [-78.6531, 36.5414, -78.0275, 36.9606] },
+            middlesex: { name: "Middlesex County", type: "county", fips: "119", center: [37.61, -76.55], zoom: 10, bbox: [-76.7098, 37.4643, -76.2919, 37.7337] },
+            montgomery: { name: "Montgomery County", type: "county", fips: "121", center: [37.18, -80.39], zoom: 10, bbox: [-80.5867, 36.9718, -80.1184, 37.3914] },
+            nelson: { name: "Nelson County", type: "county", fips: "125", center: [37.79, -78.88], zoom: 10, bbox: [-79.2247, 37.5678, -78.6433, 37.9992] },
+            new_kent: { name: "New Kent County", type: "county", fips: "127", center: [37.52, -76.98], zoom: 10, bbox: [-77.213, 37.3288, -76.7552, 37.6295] },
+            northampton: { name: "Northampton County", type: "county", fips: "131", center: [37.3, -75.93], zoom: 10, bbox: [-76.1716, 37.0541, -75.7659, 37.4714] },
+            northumberland: { name: "Northumberland County", type: "county", fips: "133", center: [37.87, -76.43], zoom: 10, bbox: [-76.6094, 37.764, -76.2527, 38.0688] },
+            nottoway: { name: "Nottoway County", type: "county", fips: "135", center: [37.14, -78.05], zoom: 10, bbox: [-78.267, 36.947, -77.8561, 37.2634] },
+            orange: { name: "Orange County", type: "county", fips: "137", center: [38.24, -78.01], zoom: 10, bbox: [-78.3831, 38.074, -77.8684, 38.4453] },
+            page: { name: "Page County", type: "county", fips: "139", center: [38.62, -78.47], zoom: 10, bbox: [-78.6817, 38.4416, -78.2908, 38.8225] },
+            patrick: { name: "Patrick County", type: "county", fips: "141", center: [36.68, -80.28], zoom: 10, bbox: [-80.4623, 36.5407, -79.9991, 36.8503] },
+            pittsylvania: { name: "Pittsylvania County", type: "county", fips: "143", center: [36.82, -79.39], zoom: 10, bbox: [-79.7448, 36.5413, -79.0905, 37.0725] },
+            powhatan: { name: "Powhatan County", type: "county", fips: "145", center: [37.55, -77.92], zoom: 10, bbox: [-78.0212, 37.3789, -77.6353, 37.6749] },
+            prince_edward: { name: "Prince Edward County", type: "county", fips: "147", center: [37.23, -78.44], zoom: 10, bbox: [-78.6825, 36.9928, -78.2324, 37.3519] },
+            prince_george: { name: "Prince George County", type: "county", fips: "149", center: [37.19, -77.22], zoom: 10, bbox: [-77.4321, 36.9881, -76.9171, 37.3412] },
+            prince_william: { name: "Prince William County", type: "county", fips: "153", center: [38.7, -77.48], zoom: 10, bbox: [-77.7903, 38.5193, -77.285, 38.8824] },
+            pulaski: { name: "Pulaski County", type: "county", fips: "155", center: [37.06, -80.72], zoom: 10, bbox: [-80.8855, 36.9352, -80.4493, 37.2352] },
+            rappahannock: { name: "Rappahannock County", type: "county", fips: "157", center: [38.68, -78.16], zoom: 10, bbox: [-78.3816, 38.4816, -77.9796, 38.8102] },
+            richmond_county: { name: "Richmond County", type: "county", fips: "159", center: [37.94, -76.73], zoom: 10, bbox: [-77.0159, 37.7959, -76.6448, 38.0986] },
+            roanoke_county: { name: "Roanoke County", type: "county", fips: "161", center: [37.28, -80.05], zoom: 10, bbox: [-80.2179, 37.0999, -79.7768, 37.4247] },
+            rockbridge: { name: "Rockbridge County", type: "county", fips: "163", center: [37.81, -79.45], zoom: 10, bbox: [-79.8282, 37.5341, -79.25, 38.0142] },
+            rockingham: { name: "Rockingham County", type: "county", fips: "165", center: [38.52, -78.88], zoom: 10, bbox: [-79.3377, 38.2024, -78.6603, 38.8128] },
+            russell: { name: "Russell County", type: "county", fips: "167", center: [36.93, -82.1], zoom: 10, bbox: [-82.3508, 36.7946, -81.7422, 37.1537] },
+            scott: { name: "Scott County", type: "county", fips: "169", center: [36.71, -82.61], zoom: 10, bbox: [-83.0936, 36.5944, -82.4581, 36.9024] },
+            shenandoah: { name: "Shenandoah County", type: "county", fips: "171", center: [38.86, -78.57], zoom: 10, bbox: [-78.8293, 38.6566, -78.4681, 39.1178] },
+            smyth: { name: "Smyth County", type: "county", fips: "173", center: [36.85, -81.54], zoom: 10, bbox: [-81.8504, 36.7056, -81.2617, 37.0053] },
+            southampton: { name: "Southampton County", type: "county", fips: "175", center: [36.72, -77.1], zoom: 10, bbox: [-77.4304, 36.5449, -76.7696, 36.9574] },
+            spotsylvania: { name: "Spotsylvania County", type: "county", fips: "177", center: [38.18, -77.65], zoom: 10, bbox: [-77.8389, 37.979, -77.366, 38.3904] },
+            stafford: { name: "Stafford County", type: "county", fips: "179", center: [38.42, -77.45], zoom: 10, bbox: [-77.6582, 38.2602, -77.2842, 38.559] },
+            surry: { name: "Surry County", type: "county", fips: "181", center: [37.12, -76.88], zoom: 10, bbox: [-77.1678, 36.8979, -76.6375, 37.2714] },
+            sussex: { name: "Sussex County", type: "county", fips: "183", center: [36.92, -77.27], zoom: 10, bbox: [-77.5269, 36.7085, -76.9319, 37.1173] },
+            tazewell: { name: "Tazewell County", type: "county", fips: "185", center: [37.12, -81.52], zoom: 10, bbox: [-81.8019, 36.8786, -81.2139, 37.3024] },
+            warren: { name: "Warren County", type: "county", fips: "187", center: [38.91, -78.21], zoom: 10, bbox: [-78.4148, 38.8102, -78.0468, 39.1127] },
+            washington: { name: "Washington County", type: "county", fips: "191", center: [36.75, -81.95], zoom: 10, bbox: [-82.3155, 36.5943, -81.6462, 37.0133] },
+            westmoreland: { name: "Westmoreland County", type: "county", fips: "193", center: [38.11, -76.8], zoom: 10, bbox: [-77.1053, 37.9651, -76.5167, 38.2655] },
+            wise: { name: "Wise County", type: "county", fips: "195", center: [36.97, -82.62], zoom: 10, bbox: [-82.9515, 36.8541, -82.3498, 37.1872] },
+            wythe: { name: "Wythe County", type: "county", fips: "197", center: [36.92, -81.08], zoom: 10, bbox: [-81.3556, 36.7544, -80.855, 37.1051] },
+            york: { name: "York County", type: "county", fips: "199", center: [37.22, -76.54], zoom: 10, bbox: [-76.6992, 37.1009, -76.3817, 37.4154] },
+            
+            // Independent Cities (38)
+            alexandria: { name: "Alexandria City", type: "city", fips: "510", center: [38.82, -77.08], zoom: 12, bbox: [-77.1445, 38.7852, -77.0381, 38.8452] },
+            bristol: { name: "Bristol City", type: "city", fips: "520", center: [36.6, -82.19], zoom: 12, bbox: [-82.2218, 36.5612, -82.1109, 36.6338] },
+            buena_vista: { name: "Buena Vista City", type: "city", fips: "530", center: [37.73, -79.35], zoom: 13, bbox: [-79.3796, 37.7062, -79.332, 37.7573] },
+            charlottesville: { name: "Charlottesville City", type: "city", fips: "540", center: [38.03, -78.48], zoom: 13, bbox: [-78.5228, 38.0007, -78.4475, 38.0653] },
+            chesapeake: { name: "Chesapeake City", type: "city", fips: "550", center: [36.77, -76.29], zoom: 10, bbox: [-76.4914, 36.5413, -76.1332, 36.866] },
+            colonial_heights: { name: "Colonial Heights City", type: "city", fips: "570", center: [37.26, -77.4], zoom: 13, bbox: [-77.4381, 37.2245, -77.3666, 37.2819] },
+            covington: { name: "Covington City", type: "city", fips: "580", center: [37.79, -79.99], zoom: 13, bbox: [-80.0175, 37.7633, -79.9567, 37.8078] },
+            danville: { name: "Danville City", type: "city", fips: "590", center: [36.59, -79.39], zoom: 12, bbox: [-79.4691, 36.5556, -79.3358, 36.6404] },
+            emporia: { name: "Emporia City", type: "city", fips: "595", center: [36.69, -77.54], zoom: 13, bbox: [-77.5628, 36.6739, -77.511, 36.7185] },
+            fairfax_city: { name: "Fairfax City", type: "city", fips: "600", center: [38.85, -77.3], zoom: 13, bbox: [-77.3309, 38.8274, -77.2672, 38.8726] },
+            falls_church: { name: "Falls Church City", type: "city", fips: "610", center: [38.88, -77.17], zoom: 14, bbox: [-77.2063, 38.8631, -77.1561, 38.892] },
+            franklin_city: { name: "Franklin City", type: "city", fips: "620", center: [36.68, -76.92], zoom: 13, bbox: [-76.9566, 36.6545, -76.895, 36.7002] },
+            fredericksburg: { name: "Fredericksburg City", type: "city", fips: "630", center: [38.3, -77.46], zoom: 13, bbox: [-77.514, 38.2803, -77.423, 38.3383] },
+            galax: { name: "Galax City", type: "city", fips: "640", center: [36.66, -80.92], zoom: 13, bbox: [-80.9432, 36.6389, -80.8871, 36.6839] },
+            hampton: { name: "Hampton City", type: "city", fips: "650", center: [37.03, -76.35], zoom: 12, bbox: [-76.4599, 36.9745, -76.2597, 37.1414] },
+            harrisonburg: { name: "Harrisonburg City", type: "city", fips: "660", center: [38.45, -78.87], zoom: 13, bbox: [-78.9268, 38.3979, -78.8248, 38.4806] },
+            hopewell: { name: "Hopewell City", type: "city", fips: "670", center: [37.3, -77.29], zoom: 13, bbox: [-77.3346, 37.2658, -77.2607, 37.3307] },
+            lexington: { name: "Lexington City", type: "city", fips: "678", center: [37.78, -79.44], zoom: 14, bbox: [-79.4621, 37.7657, -79.4266, 37.7994] },
+            lynchburg: { name: "Lynchburg City", type: "city", fips: "680", center: [37.41, -79.14], zoom: 12, bbox: [-79.2574, 37.3505, -79.0831, 37.4679] },
+            manassas: { name: "Manassas City", type: "city", fips: "683", center: [38.75, -77.47], zoom: 13, bbox: [-77.5132, 38.7218, -77.4456, 38.7816] },
+            manassas_park: { name: "Manassas Park City", type: "city", fips: "685", center: [38.77, -77.47], zoom: 14, bbox: [-77.4813, 38.7588, -77.4382, 38.7885] },
+            martinsville: { name: "Martinsville City", type: "city", fips: "690", center: [36.69, -79.87], zoom: 13, bbox: [-79.9095, 36.6526, -79.8296, 36.7211] },
+            newport_news: { name: "Newport News City", type: "city", fips: "700", center: [37.09, -76.47], zoom: 11, bbox: [-76.6212, 36.9597, -76.3351, 37.22] },
+            norfolk: { name: "Norfolk City", type: "city", fips: "710", center: [36.85, -76.29], zoom: 12, bbox: [-76.345, 36.82, -76.18, 36.97] },
+            norton: { name: "Norton City", type: "city", fips: "720", center: [36.93, -82.63], zoom: 13, bbox: [-82.6547, 36.907, -82.6036, 36.9498] },
+            petersburg: { name: "Petersburg City", type: "city", fips: "730", center: [37.23, -77.4], zoom: 12, bbox: [-77.4529, 37.1879, -77.3481, 37.252] },
+            poquoson: { name: "Poquoson City", type: "city", fips: "735", center: [37.12, -76.35], zoom: 12, bbox: [-76.4087, 37.0959, -76.2816, 37.1781] },
+            portsmouth: { name: "Portsmouth City", type: "city", fips: "740", center: [36.84, -76.35], zoom: 12, bbox: [-76.4203, 36.7879, -76.2931, 36.8918] },
+            radford: { name: "Radford City", type: "city", fips: "750", center: [37.13, -80.58], zoom: 13, bbox: [-80.6076, 37.1063, -80.5225, 37.1633] },
+            richmond_city: { name: "Richmond City", type: "city", fips: "760", center: [37.54, -77.44], zoom: 12, bbox: [-77.5775, 37.4464, -77.3853, 37.6011] },
+            roanoke_city: { name: "Roanoke City", type: "city", fips: "770", center: [37.27, -79.94], zoom: 12, bbox: [-80.0203, 37.2259, -79.8797, 37.3246] },
+            salem: { name: "Salem City", type: "city", fips: "775", center: [37.29, -80.05], zoom: 13, bbox: [-80.1085, 37.2579, -80.0053, 37.3285] },
+            staunton: { name: "Staunton City", type: "city", fips: "790", center: [38.15, -79.07], zoom: 13, bbox: [-79.1073, 38.1097, -79.02, 38.1839] },
+            suffolk: { name: "Suffolk City", type: "city", fips: "800", center: [36.73, -76.58], zoom: 10, bbox: [-76.923, 36.5453, -76.4038, 36.9384] },
+            virginia_beach: { name: "Virginia Beach City", type: "city", fips: "810", center: [36.85, -75.98], zoom: 10, bbox: [-76.2269, 36.5516, -75.8589, 36.933] },
+            waynesboro: { name: "Waynesboro City", type: "city", fips: "820", center: [38.07, -78.89], zoom: 13, bbox: [-78.9409, 38.0412, -78.8546, 38.1003] },
+            williamsburg: { name: "Williamsburg City", type: "city", fips: "830", center: [37.27, -76.71], zoom: 13, bbox: [-76.7421, 37.2498, -76.683, 37.2972] },
+            winchester: { name: "Winchester City", type: "city", fips: "840", center: [39.19, -78.17], zoom: 13, bbox: [-78.2074, 39.1383, -78.1252, 39.213] }
+        };
+        
+        // TIGERweb API Configuration
+        const TIGERWEB = {
+            baseUrl: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Census2020/MapServer",
+            stateFips: "51",
+            countyLayer: 82
+        };
+        
+        // OSM to VDOT mapping
+        const OSM_TO_VDOT = {
+            'motorway': '1', 'motorway_link': '1',
+            'trunk': '2', 'trunk_link': '2',
+            'primary': '3', 'primary_link': '3',
+            'secondary': '4', 'secondary_link': '4',
+            'tertiary': '5', 'tertiary_link': '5',
+            'unclassified': '6',
+            'residential': '7', 'living_street': '7', 'service': '7'
+        };
+        
+        const FC_STYLES = {
+            '1': { name: 'Interstate', color: '#0070ff', weight: 5 },
+            '2': { name: 'Freeway/Expressway', color: '#ff5500', weight: 4 },
+            '3': { name: 'Principal Arterial', color: '#ff2600', weight: 3.5 },
+            '4': { name: 'Minor Arterial', color: '#e6e600', weight: 3 },
+            '5': { name: 'Major Collector', color: '#559100', weight: 2.5 },
+            '6': { name: 'Minor Collector', color: '#ff7700', weight: 2 },
+            '7': { name: 'Local', color: '#a4c400', weight: 1.5 }
+        };
+        
+        // State
+        let map, boundaryLayer, roadLayers = {}, roadsData = [], allGeoJson = null;
+        let currentJurisdiction = null, selectedRoad = null, activeFilter = null, layersVisible = true;
+        
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+        function initMap() {
+            map = L.map('map', { center: [37.54, -78.5], zoom: 7, zoomControl: false });
+            
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OSM &copy; CARTO', subdomains: 'abcd', maxZoom: 19
+            }).addTo(map);
+            
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            
+            map.on('mousemove', e => {
+                document.getElementById('mapCoords').textContent = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+            });
+            map.on('zoomend', () => {
+                document.getElementById('mapZoom').textContent = `Zoom: ${map.getZoom()}`;
+            });
+            
+            populateJurisdictionSelect();
+        }
+        
+        function populateJurisdictionSelect() {
+            const select = document.getElementById('jurisdictionSelect');
+            
+            // Group by type
+            const counties = Object.entries(JURISDICTIONS).filter(([,j]) => j.type === 'county').sort((a,b) => a[1].name.localeCompare(b[1].name));
+            const cities = Object.entries(JURISDICTIONS).filter(([,j]) => j.type === 'city').sort((a,b) => a[1].name.localeCompare(b[1].name));
+            
+            // Counties
+            const countyGroup = document.createElement('optgroup');
+            countyGroup.label = `Counties (${counties.length})`;
+            counties.forEach(([key, j]) => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = j.name;
+                countyGroup.appendChild(opt);
+            });
+            select.appendChild(countyGroup);
+            
+            // Independent Cities
+            const cityGroup = document.createElement('optgroup');
+            cityGroup.label = `Independent Cities (${cities.length})`;
+            cities.forEach(([key, j]) => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = j.name;
+                cityGroup.appendChild(opt);
+            });
+            select.appendChild(cityGroup);
+        }
+        
+        // =====================================================
+        // TIGERWEB BOUNDARY FETCHING
+        // =====================================================
+        async function fetchTIGERBoundary(jurisdiction) {
+            const j = JURISDICTIONS[jurisdiction];
+            if (!j) return null;
+            
+            const fips = j.fips;
+            let url;
+            
+            if (j.type === 'county') {
+                // Counties use layer 82
+                url = `${TIGERWEB.baseUrl}/${TIGERWEB.countyLayer}/query?` +
+                    `where=STATE='${TIGERWEB.stateFips}' AND COUNTY='${fips}'` +
+                    `&outFields=*&f=geojson&outSR=4326`;
+            } else {
+                // Independent cities - use full FIPS as county equivalent
+                url = `${TIGERWEB.baseUrl}/${TIGERWEB.countyLayer}/query?` +
+                    `where=STATE='${TIGERWEB.stateFips}' AND COUNTY='${fips}'` +
+                    `&outFields=*&f=geojson&outSR=4326`;
+            }
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('TIGERweb fetch error:', error);
+                return null;
+            }
+        }
+        
+        async function onJurisdictionChange() {
+            const key = document.getElementById('jurisdictionSelect').value;
+            if (!key) return;
+            
+            currentJurisdiction = key;
+            const j = JURISDICTIONS[key];
+            
+            // Update UI
+            document.getElementById('mapJurisdiction').textContent = j.name;
+            document.getElementById('fipsDisplay').textContent = `51${j.fips}`;
+            document.getElementById('boundaryInfo').style.display = 'block';
+            
+            // Zoom to jurisdiction
+            map.setView(j.center, j.zoom);
+            
+            // Fetch and display TIGERweb boundary
+            showLoading('Fetching TIGERweb boundary...', 'Querying Census Bureau API');
+            
+            const geoJson = await fetchTIGERBoundary(key);
+            
+            if (boundaryLayer) map.removeLayer(boundaryLayer);
+            
+            if (geoJson && geoJson.features && geoJson.features.length > 0) {
+                boundaryLayer = L.geoJSON(geoJson, {
+                    style: {
+                        color: '#3b82f6',
+                        weight: 3,
+                        fillColor: '#3b82f6',
+                        fillOpacity: 0.05,
+                        dashArray: '8, 4'
+                    }
+                }).addTo(map);
+                
+                // Calculate area
+                const feature = geoJson.features[0];
+                if (feature.properties) {
+                    const areaLand = feature.properties.AREALAND;
+                    if (areaLand) {
+                        const sqMiles = (areaLand / 2589988.11).toFixed(1);
+                        document.getElementById('areaDisplay').textContent = `${sqMiles} sq mi`;
+                    }
+                }
+                
+                map.fitBounds(boundaryLayer.getBounds(), { padding: [20, 20] });
+            } else {
+                // Fallback to bbox rectangle
+                const [west, south, east, north] = j.bbox;
+                boundaryLayer = L.rectangle([[south, west], [north, east]], {
+                    color: '#3b82f6', weight: 2, fill: false, dashArray: '5, 5'
+                }).addTo(map);
+                document.getElementById('areaDisplay').textContent = 'N/A';
+            }
+            
+            hideLoading();
+        }
+        
+        // =====================================================
+        // ROAD DATA LOADING
+        // =====================================================
+        async function loadRoadData() {
+            if (!currentJurisdiction) {
+                alert('Please select a jurisdiction first');
+                return;
+            }
+            
+            const j = JURISDICTIONS[currentJurisdiction];
+            const [west, south, east, north] = j.bbox;
+            
+            document.getElementById('loadBtn').disabled = true;
+            showLoading(`Loading ${j.name}...`, 'Querying Overpass API');
+            
+            try {
+                clearRoads();
+                
+                const hwTypes = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link',
+                    'secondary','secondary_link','tertiary','tertiary_link','unclassified'];
+                
+                const wayQueries = hwTypes.map(t => `way["highway"="${t}"](${south},${west},${north},${east});`).join('\n');
+                
+                const query = `[out:json][timeout:180];(${wayQueries});out body geom;`;
+                
+                updateLoading('Fetching road geometries...', 'This may take 30-90 seconds');
+                
+                const response = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: `data=${encodeURIComponent(query)}`,
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                updateLoading('Processing...', `${data.elements?.length || 0} segments found`);
+                
+                processRoadData(data);
+                updateStats();
+                updateRoadTable();
+                
+                document.getElementById('infoBanner').classList.add('loaded');
+                document.getElementById('infoBanner').innerHTML = `
+                    <h3>✓ ${j.name} Loaded</h3>
+                    <p>${roadsData.length.toLocaleString()} road segments loaded with TIGERweb boundary.</p>
+                `;
+                
+                hideLoading();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                updateLoading('Error', error.message);
+                setTimeout(() => {
+                    hideLoading();
+                    alert(`Failed: ${error.message}`);
+                }, 2000);
+            } finally {
+                document.getElementById('loadBtn').disabled = false;
+            }
+        }
+        
+        function processRoadData(data) {
+            if (!data.elements?.length) return;
+            
+            allGeoJson = { type: 'FeatureCollection', features: [] };
+            
+            data.elements.forEach(el => {
+                if (el.type !== 'way' || !el.geometry) return;
+                
+                const tags = el.tags || {};
+                const highway = tags.highway;
+                const funcClass = OSM_TO_VDOT[highway] || '7';
+                const coords = el.geometry.map(p => [p.lat, p.lon]);
+                const length = calcLength(coords);
+                
+                const road = {
+                    id: el.id,
+                    name: tags.name || tags.ref || `Unnamed ${highway}`,
+                    highway, funcClass,
+                    ref: tags.ref || '',
+                    lanes: tags.lanes || '',
+                    maxspeed: tags.maxspeed || '',
+                    surface: tags.surface || '',
+                    length, coords
+                };
+                
+                roadsData.push(road);
+                addRoadToMap(road);
+                
+                allGeoJson.features.push({
+                    type: 'Feature',
+                    properties: { osm_id: el.id, name: road.name, highway, funcClass, ref: road.ref, length_miles: length },
+                    geometry: { type: 'LineString', coordinates: coords.map(c => [c[1], c[0]]) }
+                });
+            });
+        }
+        
+        function calcLength(coords) {
+            let t = 0;
+            for (let i = 0; i < coords.length - 1; i++) {
+                const [lat1, lon1] = coords[i], [lat2, lon2] = coords[i+1];
+                const R = 3959, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+                const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+                t += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            }
+            return t;
+        }
+        
+        function addRoadToMap(road) {
+            const fc = FC_STYLES[road.funcClass];
+            
+            const line = L.polyline(road.coords, {
+                color: fc.color, weight: fc.weight, opacity: 0.85, lineJoin: 'round', lineCap: 'round'
+            }).addTo(map);
+            
+            line.on('mouseover', function() { this.setStyle({ weight: fc.weight + 2, opacity: 1 }); this.bringToFront(); });
+            line.on('mouseout', function() { if (selectedRoad !== road.id) this.setStyle({ weight: fc.weight, opacity: 0.85 }); });
+            line.on('click', () => selectRoad(road));
+            
+            line.bindPopup(`
+                <div class="popup-title">${road.name}</div>
+                <div class="popup-class" style="background:${fc.color};color:${road.funcClass==='4'?'#000':'#fff'}">FC ${road.funcClass} · ${fc.name}</div>
+                <div class="popup-details">
+                    <div><b>Type:</b> ${road.highway}</div>
+                    <div><b>Length:</b> ${road.length.toFixed(2)} mi</div>
+                </div>
+            `);
+            
+            roadLayers[road.id] = line;
+        }
+        
+        function selectRoad(road) {
+            if (selectedRoad && roadLayers[selectedRoad]) {
+                const prev = roadsData.find(r => r.id === selectedRoad);
+                if (prev) roadLayers[selectedRoad].setStyle({ weight: FC_STYLES[prev.funcClass].weight, opacity: 0.85 });
+            }
+            
+            selectedRoad = road.id;
+            const fc = FC_STYLES[road.funcClass];
+            roadLayers[road.id].setStyle({ weight: fc.weight + 3, opacity: 1 });
+            roadLayers[road.id].bringToFront();
+            
+            document.getElementById('roadDetails').innerHTML = `
+                <div class="road-card">
+                    <div class="road-card-header">
+                        <span class="road-class-badge" style="background:${fc.color};color:${road.funcClass==='4'?'#000':'#fff'}">FC ${road.funcClass}</span>
+                        <span class="road-name">${road.name}</span>
+                    </div>
+                    <div class="road-card-body">
+                        <div class="detail-row"><span class="detail-label">VDOT Class</span><span class="detail-value">${fc.name}</span></div>
+                        <div class="detail-row"><span class="detail-label">OSM Type</span><span class="detail-value">${road.highway}</span></div>
+                        <div class="detail-row"><span class="detail-label">Route Ref</span><span class="detail-value">${road.ref || 'N/A'}</span></div>
+                        <div class="detail-row"><span class="detail-label">Length</span><span class="detail-value">${road.length.toFixed(3)} mi</span></div>
+                        <div class="detail-row"><span class="detail-label">Lanes</span><span class="detail-value">${road.lanes || 'N/A'}</span></div>
+                        <div class="detail-row"><span class="detail-label">Speed Limit</span><span class="detail-value">${road.maxspeed || 'N/A'}</span></div>
+                        <div class="detail-row"><span class="detail-label">OSM ID</span><span class="detail-value">${road.id}</span></div>
+                    </div>
+                </div>
+            `;
+            
+            document.querySelectorAll('.road-table tr').forEach(tr => tr.classList.remove('selected'));
+            const row = document.querySelector(`tr[data-id="${road.id}"]`);
+            if (row) { row.classList.add('selected'); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        }
+        
+        // =====================================================
+        // UI HELPERS
+        // =====================================================
+        function showLoading(text, progress) {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingProgress').textContent = progress;
+        }
+        
+        function updateLoading(text, progress) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingProgress').textContent = progress;
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+        
+        function filterByClass(fc) {
+            document.querySelectorAll('.legend-item').forEach(i => i.classList.remove('active'));
+            
+            if (activeFilter === fc) {
+                activeFilter = null;
+                roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: 0.85 }));
+                updateRoadTable();
+            } else {
+                activeFilter = fc;
+                document.querySelector(`.legend-item[data-class="${fc}"]`)?.classList.add('active');
+                roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: r.funcClass === fc ? 1 : 0.1 }));
+                updateRoadTable(roadsData.filter(r => r.funcClass === fc));
+            }
+        }
+        
+        function filterRoads() {
+            const q = document.getElementById('roadSearch').value.toLowerCase();
+            if (!q) {
+                roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: 0.85 }));
+                updateRoadTable();
+                return;
+            }
+            const filtered = roadsData.filter(r => r.name.toLowerCase().includes(q) || r.ref?.toLowerCase().includes(q));
+            roadsData.forEach(r => roadLayers[r.id]?.setStyle({ opacity: filtered.includes(r) ? 1 : 0.1 }));
+            updateRoadTable(filtered);
+        }
+        
+        function updateStats() {
+            document.getElementById('totalRoads').textContent = roadsData.length.toLocaleString();
+            document.getElementById('totalMiles').textContent = roadsData.reduce((s, r) => s + r.length, 0).toFixed(1);
+            for (let fc = 1; fc <= 7; fc++) {
+                document.getElementById(`count-${fc}`).textContent = roadsData.filter(r => r.funcClass === String(fc)).length;
+            }
+        }
+        
+        function updateRoadTable(data = null) {
+            const d = (data || roadsData).slice(0, 150);
+            document.getElementById('roadTableBody').innerHTML = d.map(r => {
+                const fc = FC_STYLES[r.funcClass];
+                return `<tr data-id="${r.id}" onclick="selectRoadById(${r.id})">
+                    <td><span class="class-dot" style="background:${fc.color}"></span>${r.name.substring(0,20)}${r.name.length>20?'...':''}</td>
+                    <td>${r.funcClass}</td>
+                    <td>${r.highway}</td>
+                </tr>`;
+            }).join('');
+            document.getElementById('roadListCount').textContent = `${(data||roadsData).length.toLocaleString()} segments`;
+        }
+        
+        function selectRoadById(id) { const r = roadsData.find(x => x.id === id); if (r) selectRoad(r); }
+        
+        function resetView() {
+            if (currentJurisdiction) {
+                const j = JURISDICTIONS[currentJurisdiction];
+                map.setView(j.center, j.zoom);
+            } else {
+                map.setView([37.54, -78.5], 7);
+            }
+        }
+        
+        function toggleLayers() {
+            layersVisible = !layersVisible;
+            Object.values(roadLayers).forEach(l => layersVisible ? l.addTo(map) : map.removeLayer(l));
+        }
+        
+        function fitToBounds() {
+            if (Object.keys(roadLayers).length) {
+                map.fitBounds(L.featureGroup(Object.values(roadLayers)).getBounds(), { padding: [20, 20] });
+            } else if (boundaryLayer) {
+                map.fitBounds(boundaryLayer.getBounds(), { padding: [20, 20] });
+            }
+        }
+        
+        function clearRoads() {
+            Object.values(roadLayers).forEach(l => map.removeLayer(l));
+            roadLayers = {};
+            roadsData = [];
+            allGeoJson = null;
+            selectedRoad = null;
+            activeFilter = null;
+        }
+        
+        function clearData() {
+            clearRoads();
+            updateStats();
+            updateRoadTable();
+            document.getElementById('roadDetails').innerHTML = `<div class="no-selection"><div class="no-selection-icon">🛣️</div><p>Select a jurisdiction and load roads.</p></div>`;
+            document.getElementById('infoBanner').classList.remove('loaded');
+            document.getElementById('infoBanner').innerHTML = `<h3>🗺️ TIGERweb + OSM Data</h3><p>Select a jurisdiction to load Census TIGER boundaries, then fetch road data.</p>`;
+        }
+        
+        function exportData() {
+            if (!allGeoJson?.features?.length) { alert('No data to export.'); return; }
+            const j = JURISDICTIONS[currentJurisdiction];
+            const name = j?.name?.toLowerCase().replace(/\s+/g, '_') || 'virginia';
+            const blob = new Blob([JSON.stringify(allGeoJson, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${name}_vdot_roads.geojson`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html>
